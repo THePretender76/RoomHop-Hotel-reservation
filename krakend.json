@@ -1,0 +1,69 @@
+{
+  "version": 3,
+  "port": 8080,
+  "timeout": "3s",
+  "endpoints": [
+    {
+      "endpoint": "/v1/search",
+      "method": "GET",
+      "output_encoding": "json",
+      "input_headers": ["Content-Type"],
+      "input_query_strings": ["location", "checkIn", "checkOut", "guests", "minPrice", "maxPrice"],
+      "backend": [
+        {
+          "url_pattern": "/v1/search",
+          "host": ["http://host.docker.internal:3000"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/reservations",
+      "method": "POST",
+      "output_encoding": "json",
+      "input_headers": ["Idempotency-Key", "Content-Type"],
+      "backend": [
+        {
+          "url_pattern": "/v1/reservations",
+          "host": ["http://host.docker.internal:3000"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/reservations",
+      "method": "GET",
+      "output_encoding": "json",
+      "input_headers": ["Content-Type"],
+      "input_query_strings": ["guest_id"],
+      "backend": [
+        {
+          "url_pattern": "/v1/reservations",
+          "host": ["http://host.docker.internal:3000"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/reservations/{id}",
+      "method": "GET",
+      "output_encoding": "json",
+      "input_headers": ["Content-Type"],
+      "backend": [
+        {
+          "url_pattern": "/v1/reservations/{id}",
+          "host": ["http://host.docker.internal:3000"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/reservations/{id}",
+      "method": "DELETE",
+      "output_encoding": "json",
+      "input_headers": ["Content-Type"],
+      "backend": [
+        {
+          "url_pattern": "/v1/reservations/{id}",
+          "host": ["http://host.docker.internal:3000"]
+        }
+      ]
+    }
+  ]
+}

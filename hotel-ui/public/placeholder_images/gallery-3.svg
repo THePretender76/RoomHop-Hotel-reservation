@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <rect width="1200" height="800" fill="#FFF1F2" />
+  <rect x="80" y="200" width="400" height="320" rx="18" fill="#F43F5E" opacity="0.12" />
+  <rect x="720" y="200" width="320" height="320" rx="18" fill="#FB923C" opacity="0.12" />
+  <text x="50%" y="70%" font-size="28" text-anchor="middle" fill="#111827" font-family="Arial">Local Flavor</text>
+</svg>

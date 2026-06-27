@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <rect width="1200" height="800" fill="#FFF1F2" />
+  <circle cx="300" cy="300" r="220" fill="#F43F5E" opacity="0.15" />
+  <rect x="560" y="220" width="480" height="360" rx="20" fill="#FB923C" opacity="0.12" />
+  <text x="50%" y="70%" font-size="28" text-anchor="middle" fill="#111827" font-family="Arial">City Escape</text>
+</svg>

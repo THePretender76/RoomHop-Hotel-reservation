@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#FFF1F2" />
+  <rect x="40" y="40" width="720" height="520" rx="18" fill="#F43F5E" opacity="0.08" />
+  <text x="50%" y="54%" font-size="24" text-anchor="middle" fill="#111827" font-family="Arial">Harborview Commons</text>
+</svg>

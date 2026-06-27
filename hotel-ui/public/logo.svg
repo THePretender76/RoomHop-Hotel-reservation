@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="p" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#a8edea"/>
+      <stop offset="50%" stop-color="#fed6e3"/>
+      <stop offset="100%" stop-color="#fbc2eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="20" fill="url(#p)" />
+  <!-- bed icon -->
+  <g transform="translate(18,40)" fill="#fff">
+    <rect x="0" y="18" width="84" height="16" rx="3" />
+    <rect x="6" y="2" width="28" height="18" rx="3" />
+    <rect x="44" y="2" width="34" height="18" rx="3" opacity="0.95"/>
+    <circle cx="72" cy="26" r="3" />
+  </g>
+  <text x="12" y="112" fill="#6b2a8a" font-family="Inter, sans-serif" font-weight="700" font-size="14">BookRoom</text>
+</svg>

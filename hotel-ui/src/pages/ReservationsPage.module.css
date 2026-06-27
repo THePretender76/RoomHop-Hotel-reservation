@@ -1,0 +1,329 @@
+.page {
+  padding-top: 80px;
+  min-height: 100vh;
+  background: var(--bg-body);
+  padding-bottom: 80px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.pageTitle {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.pageSubtitle {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+}
+
+/* Lookup Card */
+.lookupCard {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  margin-bottom: 24px;
+}
+
+.lookupForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.lookupOptions {
+  display: flex;
+  gap: 24px;
+}
+
+.radioLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.radioLabel input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+.lookupInputRow {
+  display: flex;
+  gap: 12px;
+}
+
+.lookupInput {
+  flex: 1;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  background: var(--white);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+}
+
+.lookupInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.lookupBtn {
+  padding: 12px 28px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #1a73a7, #2196c4);
+  color: var(--white);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  white-space: nowrap;
+}
+
+.lookupBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #155d87, #1a8ab0);
+  transform: translateY(-1px);
+}
+
+.lookupBtn:disabled {
+  background: var(--dust-grey);
+  color: var(--grey);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Messages */
+.successMsg {
+  padding: 14px 18px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-md);
+  color: #166534;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}
+
+.errorMsg {
+  padding: 14px 18px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  color: #dc2626;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}
+
+.noResults {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  padding: 32px 0;
+}
+
+/* Results List */
+.resultsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Reservation Card */
+.reservationCard {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--platinum);
+}
+
+.reservationId {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Status Badge */
+.statusBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statusConfirmed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.statusCancelled {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Card Body */
+.cardBody {
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+}
+
+.cardRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--silver);
+}
+
+.cardValue {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Card Footer */
+.cardFooter {
+  padding: 16px 24px;
+  border-top: 1px solid var(--platinum);
+}
+
+.cancelBtn {
+  padding: 10px 20px;
+  border: 1.5px solid #dc2626;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: #dc2626;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.cancelBtn:hover {
+  background: #fef2f2;
+}
+
+/* Confirm Dialog */
+.confirmDialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.confirmDialog p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.confirmActions {
+  display: flex;
+  gap: 10px;
+}
+
+.confirmYes {
+  padding: 8px 18px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: #dc2626;
+  color: var(--white);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.confirmYes:hover {
+  background: #b91c1c;
+}
+
+.confirmNo {
+  padding: 8px 18px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.confirmNo:hover {
+  background: var(--platinum);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 24px 16px;
+  }
+
+  .lookupCard {
+    padding: 24px 20px;
+  }
+
+  .lookupInputRow {
+    flex-direction: column;
+  }
+
+  .lookupBtn {
+    width: 100%;
+  }
+
+  .cardBody {
+    grid-template-columns: 1fr;
+    padding: 16px 20px;
+  }
+
+  .cardHeader {
+    padding: 16px 20px;
+  }
+
+  .cardFooter {
+    padding: 12px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pageTitle {
+    font-size: 1.6rem;
+  }
+
+  .lookupOptions {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

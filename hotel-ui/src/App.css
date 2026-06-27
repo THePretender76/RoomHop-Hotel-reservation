@@ -1,0 +1,6 @@
+/* App-level layout — minimal, just ensures full-height routing */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}

@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # Base de données relationnelle
+  mysql:
+    image: mysql:8.0
+    container_name: hotel-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: hotel_db
+    ports:
+      - "3306:3306"
+
+  # Interface graphique pour MySQL
+  adminer:
+    image: adminer
+    container_name: hotel-db-ui
+    ports:
+      - "8081:8080"
+
+  # Cache In-Memory
+  redis:
+    image: redis:7-alpine
+    container_name: hotel-redis
+    ports:
+      - "6379:6379"
+
+  # Message Broker (Kafka sans Zookeeper)
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: hotel-kafka
+    environment:
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_LISTENERS=PLAINTEXT://:9022,CONTROLLER://:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9022
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093
+      - KAFKA_LOG_DIRS=/tmp/kraft-combined-logs
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+    ports:
+      - "9022:9022"
+
+  # Interface graphique pour monitorer Kafka (Topics, Messages)
+  akhq:
+    image: tchiotludo/akhq
+    container_name: hotel-kafka-ui
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            local-kafka:
+              properties:
+                bootstrap.servers: "kafka:9022"
+    ports:
+      - "8082:8080"
+    depends_on:
+      - kafka
+
+  # Moteur de recherche (boosté à 2 Go de RAM grâce à vos 32 Go)
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: hotel-opensearch
+    environment:
+      - cluster.name=opensearch-cluster
+      - node.name=opensearch-node
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - DISABLE_SECURITY_PLUGIN=true
+      - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+
+  # API Gateway
+  krakend:
+    image: devopsfaith/krakend:2.4
+    container_name: hotel-gateway
+    volumes:
+      - ./krakend.json:/etc/krakend/krakend.json
+    ports:
+      - "8080:8080"
+# Simulateur AWS S3
+  minio:
+    image: minio/minio:RELEASE.2024-03-07T00-43-48Z
+    container_name: hotel-s3-local
+    ports:
+      - "9000:9000" # Port pour l'API (votre code)
+      - "9001:9001" # Port pour l'interface web (votre navigateur)
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: miniopassword
+    command: server /data --console-address ":9001"

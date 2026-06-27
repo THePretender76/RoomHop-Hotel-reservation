@@ -1,0 +1,18 @@
+{
+  "name": "notification-service",
+  "version": "1.0.0",
+  "description": "RoomHop Notification Service — Kafka consumer for reservation events",
+  "main": "src/consumer.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/consumer.js",
+    "test": "jest --runInBand"
+  },
+  "dependencies": {
+    "kafkajs": "2.2.4"
+  },
+  "devDependencies": {
+    "jest": "29.7.0",
+    "fast-check": "3.23.2"
+  }
+}

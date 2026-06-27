@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#F43F5E" />
+      <stop offset="1" stop-color="#FB923C" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="#FFF1F2" />
+  <rect x="0" y="0" width="1200" height="800" fill="url(#g)" opacity="0.08" />
+  <g font-family="Arial, Helvetica, sans-serif" fill="#111827" text-anchor="middle">
+    <text x="50%" y="48%" font-size="48">RoomHop</text>
+    <text x="50%" y="58%" font-size="20">Minimalist travel visuals — Rose & Coral palette</text>
+  </g>
+</svg>

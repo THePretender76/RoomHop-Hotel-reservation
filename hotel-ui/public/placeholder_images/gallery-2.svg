@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <rect width="1200" height="800" fill="#FFF1F2" />
+  <rect x="120" y="120" width="960" height="560" rx="28" fill="#FB923C" opacity="0.08" />
+  <circle cx="800" cy="340" r="160" fill="#F43F5E" opacity="0.14" />
+  <text x="50%" y="75%" font-size="28" text-anchor="middle" fill="#111827" font-family="Arial">Poolside Relax</text>
+</svg>

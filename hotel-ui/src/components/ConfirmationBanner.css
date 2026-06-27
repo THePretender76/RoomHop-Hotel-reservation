@@ -1,0 +1,61 @@
+.confirmation-banner {
+  text-align: center;
+  padding: 32px 24px;
+  background: #F2F2F2;
+  border-radius: 12px;
+}
+
+.confirmation-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #22c55e;
+  border-radius: 50%;
+  font-size: 1.8rem;
+  color: #ffffff;
+}
+
+.confirmation-banner h3 {
+  margin: 0 0 20px;
+  font-size: 1.3rem;
+  color: #2D2D2D;
+}
+
+.confirmation-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid #E5E5E5;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  color: #7F7F7F;
+  font-size: 0.9rem;
+}
+
+.detail-value {
+  font-weight: 600;
+  color: #2D2D2D;
+  font-size: 0.95rem;
+}
+
+.detail-value.amount {
+  font-weight: 700;
+  color: #595959;
+  font-size: 1.05rem;
+}
