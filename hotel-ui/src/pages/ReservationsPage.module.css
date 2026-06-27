@@ -1,7 +1,7 @@
 .page {
+  background: #F9FAFB;
   padding-top: 80px;
   min-height: 100vh;
-  background: var(--bg-body);
   padding-bottom: 80px;
 }
 
@@ -11,81 +11,111 @@
   padding: 40px 24px;
 }
 
+/* Breadcrumb */
+.breadcrumb {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.breadcrumb a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.breadcrumb span {
+  color: var(--text-muted);
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .pageTitle {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 2rem;
-  font-weight: 700;
+  font-family: var(--font-sans);
+  font-size: 1.8rem;
+  font-weight: 800;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+
+.titleIcon {
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
 .pageSubtitle {
   font-size: 0.95rem;
   color: var(--text-muted);
-  margin-bottom: 32px;
+  margin: 0;
 }
 
-/* Lookup Card */
-.lookupCard {
-  background: var(--white);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-color);
+/* Search Bar */
+.searchBar {
+  display: flex;
+  gap: 12px;
   margin-bottom: 24px;
 }
 
-.lookupForm {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.lookupOptions {
-  display: flex;
-  gap: 24px;
-}
-
-.radioLabel {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.radioLabel input[type="radio"] {
-  accent-color: var(--accent);
-}
-
-.lookupInputRow {
-  display: flex;
-  gap: 12px;
-}
-
-.lookupInput {
+.searchInputWrap {
+  position: relative;
   flex: 1;
-  padding: 12px 14px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--silver);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 14px 14px 14px 42px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: 14px;
   font-size: 0.95rem;
   color: var(--text-primary);
   background: var(--white);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.lookupInput:focus {
+.searchInput:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-light);
 }
 
-.lookupBtn {
-  padding: 12px 28px;
+.searchInput::placeholder {
+  color: var(--silver);
+}
+
+.searchBtn {
+  padding: 14px 28px;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: 14px;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
@@ -93,29 +123,106 @@
   color: var(--white);
   transition: opacity 0.2s ease, transform 0.2s ease;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.lookupBtn:hover:not(:disabled) {
+.searchBtn:hover:not(:disabled) {
   background: linear-gradient(135deg, #155d87, #1a8ab0);
   transform: translateY(-1px);
 }
 
-.lookupBtn:disabled {
+.searchBtn:disabled {
   background: var(--dust-grey);
   color: var(--grey);
   cursor: not-allowed;
   transform: none;
 }
 
+/* Stats Bar */
+.statsBar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.statChip {
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  transition: box-shadow 0.2s ease;
+}
+
+.statChip:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.statNumber {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--platinum);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 24px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  color: var(--text-secondary);
+}
+
+.tabActive {
+  background: var(--white);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
 /* Messages */
 .successMsg {
   padding: 14px 18px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #94a3b8;
   border-radius: var(--radius-md);
-  color: #166534;
+  color: #475569;
   font-size: 0.9rem;
   margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .errorMsg {
@@ -128,18 +235,11 @@
   margin-bottom: 16px;
 }
 
-.noResults {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.95rem;
-  padding: 32px 0;
-}
-
 /* Results List */
 .resultsList {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
 /* Reservation Card */
@@ -149,8 +249,15 @@
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
   overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
+.reservationCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
+}
+
+/* Card Header */
 .cardHeader {
   display: flex;
   align-items: center;
@@ -159,8 +266,22 @@
   border-bottom: 1px solid var(--platinum);
 }
 
+.cardHeaderLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .reservationId {
-  font-size: 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--silver);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.hotelName {
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -173,7 +294,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .statusConfirmed {
@@ -182,8 +303,8 @@
 }
 
 .statusCancelled {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: #fef3c7;
+  color: #92400e;
 }
 
 /* Card Body */
@@ -204,7 +325,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   color: var(--silver);
 }
 
@@ -212,6 +333,11 @@
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--text-primary);
+}
+
+.amount {
+  font-weight: 700;
+  color: #d97706;
 }
 
 /* Card Footer */
@@ -246,6 +372,7 @@
 .confirmDialog p {
   font-size: 0.9rem;
   color: var(--text-secondary);
+  margin: 0;
 }
 
 .confirmActions {
@@ -285,22 +412,103 @@
   background: var(--platinum);
 }
 
+/* Card Actions */
+.cardActions {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.actionLink {
+  font-size: 0.82rem;
+  color: var(--silver);
+  cursor: default;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 60px 24px;
+}
+
+.emptyIcon {
+  color: var(--dust-grey);
+  margin-bottom: 16px;
+}
+
+.emptyTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.emptyText {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  max-width: 380px;
+  margin: 0 auto 20px;
+}
+
+.emptyCta {
+  display: inline-block;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #1a73a7, #2196c4);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+
+.emptyCta:hover {
+  transform: translateY(-1px);
+}
+
+/* Spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .container {
     padding: 24px 16px;
   }
 
-  .lookupCard {
-    padding: 24px 20px;
-  }
-
-  .lookupInputRow {
+  .searchBar {
     flex-direction: column;
   }
 
-  .lookupBtn {
+  .searchBtn {
     width: 100%;
+  }
+
+  .statsBar {
+    flex-wrap: wrap;
+  }
+
+  .statChip {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+  }
+
+  .tabs {
+    overflow-x: auto;
   }
 
   .cardBody {
@@ -319,11 +527,19 @@
 
 @media (max-width: 480px) {
   .pageTitle {
-    font-size: 1.6rem;
+    font-size: 1.4rem;
   }
 
-  .lookupOptions {
-    flex-direction: column;
-    gap: 12px;
+  .statChip {
+    padding: 10px 12px;
+  }
+
+  .statNumber {
+    font-size: 1.1rem;
+  }
+
+  .tab {
+    padding: 8px 12px;
+    font-size: 0.8rem;
   }
 }
