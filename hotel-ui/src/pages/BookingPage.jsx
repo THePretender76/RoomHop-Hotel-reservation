@@ -109,9 +109,6 @@ export default function BookingPage() {
   if (reservation) {
     const confirmNights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000*60*60*24));
     const confirmNightlyRate = parseFloat(roomType.nightly_rate);
-    const subtotal = confirmNightlyRate * confirmNights;
-    const cityTax = Math.round(subtotal * 0.05 * 100) / 100; // 5% city tax
-    const serviceFee = 15.00;
     const confirmTotal = parseFloat(reservation.amount);
 
     return (
@@ -154,11 +151,15 @@ export default function BookingPage() {
                   <p className={styles.confirmHotelAddress}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                     {hotel.location}
+                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotel.location)}`} target="_blank" rel="noopener noreferrer" className={styles.mapLink}>View on Map →</a>
                   </p>
                   <div className={styles.hotelMeta}>
                     <span className={styles.starRating}>★★★★★ 4.7/5</span>
                     <span className={styles.reviewCount}>1,240 reviews</span>
                   </div>
+                  {roomType.image_url && (
+                    <img src={roomType.image_url} alt={roomType.name} className={styles.confirmRoomImage} />
+                  )}
                 </div>
 
                 <div className={styles.detailsGrid}>
@@ -194,16 +195,8 @@ export default function BookingPage() {
                 <h2 className={styles.confirmSectionTitle2}>Price Breakdown</h2>
                 <div className={styles.priceBreakdown}>
                   <div className={styles.priceLine}>
-                    <span>€{confirmNightlyRate} × {confirmNights} nights</span>
-                    <span>€{subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className={styles.priceLine}>
-                    <span>City tax (5%)</span>
-                    <span>€{cityTax.toFixed(2)}</span>
-                  </div>
-                  <div className={styles.priceLine}>
-                    <span>Service fee</span>
-                    <span>€{serviceFee.toFixed(2)}</span>
+                    <span>€{confirmNightlyRate} × {confirmNights} night{confirmNights !== 1 ? 's' : ''}</span>
+                    <span>€{confirmTotal.toFixed(2)}</span>
                   </div>
                   <div className={`${styles.priceLine} ${styles.priceTotal}`}>
                     <span>Total</span>
@@ -254,6 +247,7 @@ export default function BookingPage() {
             {/* Action Buttons */}
             <div className={styles.confirmActions}>
               <Link to="/reservations" className={styles.confirmPrimaryBtn}>View My Reservations</Link>
+              <button className={styles.confirmSecondaryBtn} onClick={() => window.print()}>Download PDF Receipt</button>
               <Link to="/search" className={styles.confirmSecondaryBtn}>Book Another Stay</Link>
             </div>
 
