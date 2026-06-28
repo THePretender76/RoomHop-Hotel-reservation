@@ -13,7 +13,7 @@ const logger = require('../logger');
 
 // Buffer events and flush periodically (batch writes for efficiency)
 const BATCH_SIZE = 10;       // Write after 10 events
-const FLUSH_INTERVAL = 30000; // Or every 30 seconds
+const FLUSH_INTERVAL = 5000; // Flush every 5 seconds for faster analytics
 let reservationBuffer = [];
 let flushTimer = null;
 

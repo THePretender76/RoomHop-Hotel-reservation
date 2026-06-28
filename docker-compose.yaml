@@ -102,21 +102,7 @@ services:
       MINIO_ROOT_PASSWORD: miniopassword
     command: server /data --console-address ":9001"
 
-  # Trino — Distributed SQL query engine for the data lake
-  trino:
-    image: trinodb/trino:435
-    container_name: hotel-trino
-    ports:
-      - "8083:8083"
-    volumes:
-      - ./trino/catalog:/etc/trino/catalog
-      - ./trino/etc/config.properties:/etc/trino/config.properties
-      - ./trino/etc/node.properties:/etc/trino/node.properties
-      - ./trino/etc/jvm.config:/etc/trino/jvm.config
-    depends_on:
-      - minio
-
-  # Metabase — BI visualization and dashboarding
+  # Metabase — BI visualization and dashboarding (connects directly to MySQL)
   metabase:
     image: metabase/metabase:latest
     container_name: hotel-metabase
@@ -125,4 +111,4 @@ services:
     environment:
       - MB_DB_TYPE=h2
     depends_on:
-      - trino
+      - mysql

@@ -22,8 +22,7 @@ Hotel images served from MinIO (S3-compatible, port 9000)
 | Database | Docker | 3306 | MySQL 8.0 |
 | Message Broker | Docker | 9022 | Apache Kafka (KRaft) |
 | Object Storage | Docker | 9000 | MinIO |
-| SQL Engine | Docker | 8083 | Trino 435 |
-| BI Dashboards | Docker | 3001 | Metabase |
+| BI Dashboards | Docker | 3001 | Metabase (connects to MySQL) |
 
 ## Features
 
@@ -197,11 +196,8 @@ Hotel_Management_system/
 │       ├── writers/        # Parquet file writers
 │       ├── transformers/   # Event routing and transformation
 │       └── storage/        # MinIO S3 client
-├── trino/                  # Trino SQL engine configuration
-│   ├── catalog/            # Hive connector (MinIO → Parquet)
-│   └── etc/                # Node and JVM config
 ├── database/               # SQL migrations and seed data
-├── docker-compose.yaml     # Infrastructure (MySQL, Kafka, MinIO, Trino, Metabase)
+├── docker-compose.yaml     # Infrastructure (MySQL, Kafka, MinIO, Metabase)
 └── krakend.json            # API Gateway configuration
 ```
 
@@ -225,145 +221,92 @@ docker-compose down
 
 ## BI & Analytics Platform
 
-RoomHop includes a complete BI & Analytics pipeline that transforms real-time reservation events into queryable data for dashboards and business intelligence.
+RoomHop includes Metabase for business intelligence dashboards, connected directly to the MySQL transactional database.
 
-### Analytics Architecture
+### Architecture
 
 ```
-Kafka (hotel.events.reservations) → Analytics Service → Parquet files → MinIO bucket
-                                                                            ↓
-                                                                         Trino (SQL)
-                                                                            ↓
-                                                                        Metabase (Dashboards)
+MySQL (hotel_db) → Metabase (BI Dashboards)
+```
+
+Additionally, the Analytics Service writes event data as Parquet files to MinIO for long-term archival:
+
+```
+Kafka → Analytics Service → Parquet → MinIO (hotel-analytic-roomhop-76700)
 ```
 
 | Component | Port | Purpose |
 |-----------|------|---------|
-| Analytics Service | — (consumer) | Kafka → Parquet pipeline |
-| Trino | 8083 | Distributed SQL over Parquet in MinIO |
-| Metabase | 3001 | BI dashboards and visualization |
+| Metabase | 3001 | BI dashboards connected to MySQL |
+| Analytics Service | — | Kafka consumer, writes Parquet to MinIO for archival |
 
-### How It Works
+### Setting Up Metabase
 
-1. **Kafka Consumer** — The analytics service subscribes to `hotel.events.reservations` and receives every confirmed/cancelled reservation event
-2. **Event Transformation** — Raw events are normalized into a flat analytical schema with partition columns (year, month)
-3. **Parquet Batch Writing** — Events are buffered (batch of 10 or every 30 seconds) and written as Apache Parquet files to MinIO
-4. **Hive-Partitioned Storage** — Files are stored at `reservations/year=YYYY/month=MM/<uuid>.parquet` for efficient time-range pruning
-5. **Trino SQL** — Trino reads Parquet files directly from MinIO using the Hive connector with column pruning and predicate pushdown
-6. **Metabase Dashboards** — Connects to Trino for visual KPI dashboards
+1. Start Metabase: `docker-compose up -d metabase`
+2. Open **http://localhost:3001**
+3. Complete the setup wizard (create admin account)
+4. Add database connection:
+   - **Type**: MySQL
+   - **Host**: `host.docker.internal`
+   - **Port**: `3306`
+   - **Database**: `hotel_db`
+   - **Username**: `root`
+   - **Password**: `rootpassword`
+5. Metabase will scan tables and you can build dashboards immediately
 
-### Why Apache Parquet?
-
-| Feature | Benefit |
-|---------|---------|
-| Columnar format | Only reads columns needed for a query (column pruning) |
-| Compression | 5-10x smaller than JSON/CSV |
-| Typed schema | Schema-embedded, no parsing ambiguity |
-| Predicate pushdown | Trino skips row groups based on min/max stats |
-| Industry standard | Works with Spark, Trino, Athena, BigQuery, Databricks |
-
-### How Trino Works
-
-Trino is a **distributed SQL query engine** that never stores data — it's pure compute:
-
-- **Column Pruning** — Only reads the Parquet columns referenced in your SELECT clause
-- **Predicate Pushdown** — Filters on partitioned columns (year/month) skip entire files
-- **Row Group Statistics** — Each Parquet row group stores min/max for each column; Trino skips groups that can't contain matching rows
-- **Distributed Execution** — Queries are split into stages and executed in parallel across workers
-- **Memory Model** — Spills to disk when memory pressure exceeds thresholds, preventing OOM crashes
-
-### Starting the Analytics Service
-
-```bash
-# 1. Ensure Docker infrastructure is running
-docker-compose up -d
-
-# 2. Install dependencies
-cd analytics-service
-npm install
-
-# 3. Start the consumer
-node src/consumer.js
-```
-
-You should see:
-```
-Analytics bucket exists { bucket: 'hotel-analytic-roomhop-76700' }
-Analytics consumer connected { topic: 'hotel.events.reservations', groupId: 'analytics-service' }
-```
-
-### Accessing Trino (SQL)
-
-Once `docker-compose up -d` includes Trino:
-
-```bash
-# Connect via Trino CLI (or any JDBC client at localhost:8083)
-docker exec -it hotel-trino trino
-
-# Example: list catalogs
-SHOW CATALOGS;
-
-# Example: query reservation analytics
-SELECT hotel_name, COUNT(*) as bookings, SUM(amount) as revenue
-FROM minio.default.reservations
-WHERE year = 2026 AND month = 6
-GROUP BY hotel_name
-ORDER BY revenue DESC;
-```
-
-### Accessing Metabase (Dashboards)
-
-1. Open **http://localhost:3001** in your browser
-2. Complete the initial setup wizard
-3. Add a **Trino** database connection:
-   - Host: `trino` (Docker network name)
-   - Port: `8083`
-   - Database: `minio`
-   - Schema: `default`
-4. Create questions and dashboards using the reservation analytics data
-
-### Example KPI Queries (Trino SQL)
+### Example KPI Queries (MySQL via Metabase)
 
 ```sql
 -- Daily booking volume
-SELECT booking_date, COUNT(*) AS bookings
-FROM minio.default.reservations
-WHERE event_type = 'reservation.confirmed'
-GROUP BY booking_date
+SELECT DATE(created_at) AS booking_date, COUNT(*) AS bookings
+FROM reservation
+WHERE status = 'CONFIRMED'
+GROUP BY DATE(created_at)
 ORDER BY booking_date DESC
 LIMIT 30;
 
 -- Revenue by hotel (monthly)
-SELECT hotel_name, year, month, SUM(amount) AS total_revenue, COUNT(*) AS total_bookings
-FROM minio.default.reservations
-WHERE event_type = 'reservation.confirmed'
-GROUP BY hotel_name, year, month
-ORDER BY year DESC, month DESC, total_revenue DESC;
+SELECT h.name AS hotel_name, YEAR(r.created_at) AS yr, MONTH(r.created_at) AS mo,
+       SUM(r.amount) AS total_revenue, COUNT(*) AS total_bookings
+FROM reservation r
+JOIN hotel h ON h.hotel_id = r.hotel_id
+WHERE r.status = 'CONFIRMED'
+GROUP BY h.name, YEAR(r.created_at), MONTH(r.created_at)
+ORDER BY yr DESC, mo DESC, total_revenue DESC;
 
 -- Cancellation rate by hotel
-SELECT hotel_name,
-       COUNT(CASE WHEN event_type = 'reservation.confirmed' THEN 1 END) AS confirmed,
-       COUNT(CASE WHEN event_type = 'reservation.cancelled' THEN 1 END) AS cancelled,
-       ROUND(
-         COUNT(CASE WHEN event_type = 'reservation.cancelled' THEN 1 END) * 100.0 /
-         NULLIF(COUNT(*), 0), 2
-       ) AS cancellation_rate_pct
-FROM minio.default.reservations
-GROUP BY hotel_name
-ORDER BY cancellation_rate_pct DESC;
+SELECT h.name AS hotel_name,
+       SUM(CASE WHEN r.status = 'CONFIRMED' THEN 1 ELSE 0 END) AS confirmed,
+       SUM(CASE WHEN r.status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled,
+       ROUND(SUM(CASE WHEN r.status = 'CANCELLED' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS cancel_rate_pct
+FROM reservation r
+JOIN hotel h ON h.hotel_id = r.hotel_id
+GROUP BY h.name;
 
 -- Average stay duration
-SELECT hotel_name, AVG(DATE_DIFF('day', DATE(check_in), DATE(check_out))) AS avg_nights
-FROM minio.default.reservations
-WHERE event_type = 'reservation.confirmed' AND check_in IS NOT NULL AND check_out IS NOT NULL
-GROUP BY hotel_name;
+SELECT h.name, AVG(DATEDIFF(r.end_date, r.start_date)) AS avg_nights
+FROM reservation r
+JOIN hotel h ON h.hotel_id = r.hotel_id
+WHERE r.status = 'CONFIRMED'
+GROUP BY h.name;
 
 -- Top room types by revenue
-SELECT room_type, COUNT(*) AS bookings, SUM(amount) AS revenue
-FROM minio.default.reservations
-WHERE event_type = 'reservation.confirmed' AND room_type IS NOT NULL
-GROUP BY room_type
+SELECT rt.name AS room_type, COUNT(*) AS bookings, SUM(r.amount) AS revenue
+FROM reservation r
+JOIN room_type rt ON rt.room_type_id = r.room_type_id
+WHERE r.status = 'CONFIRMED'
+GROUP BY rt.name
 ORDER BY revenue DESC;
+```
+
+### Analytics Service (Parquet Archival)
+
+The analytics service still runs as a Kafka consumer writing Parquet to MinIO for long-term archival. This data can be queried later with Athena, Spark, or Trino if needed at scale.
+
+```bash
+cd analytics-service
+npm install
+node src/consumer.js
 ```
 
 ### Analytics Environment Variables
@@ -375,7 +318,6 @@ ORDER BY revenue DESC;
 | `MINIO_PORT` | `9000` | MinIO port |
 | `MINIO_ACCESS_KEY` | `minioadmin` | MinIO access key |
 | `MINIO_SECRET_KEY` | `miniopassword` | MinIO secret key |
-| `LOG_LEVEL` | `info` | Minimum log level |
 
 ## License
 
