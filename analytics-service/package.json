@@ -1,0 +1,18 @@
+{
+  "name": "analytics-service",
+  "version": "1.0.0",
+  "description": "RoomHop BI & Analytics Microservice — Kafka to Parquet pipeline",
+  "main": "src/consumer.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/consumer.js",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "kafkajs": "2.2.4",
+    "minio": "^7.1.3",
+    "@dsnp/parquetjs": "^1.8.7",
+    "winston": "^3.11.0",
+    "uuid": "^9.0.0"
+  }
+}
