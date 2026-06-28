@@ -212,3 +212,66 @@ docker-compose down
 ## License
 
 Private project — not for distribution.
+
+
+## Structured Logging
+
+Both backend services use **Winston** for structured JSON logging with automatic CloudWatch integration.
+
+### Local Development
+
+Logs appear in the console with colorized, human-readable format:
+```
+15:04:22.123 [info] [hotel-api] Request received {"requestId":"abc-123","method":"GET","path":"/v1/search"}
+```
+
+JSON logs are also written to `logs/app.log` in each service directory.
+
+### AWS Deployment (CloudWatch)
+
+Set these environment variables to enable CloudWatch logging:
+
+```bash
+export NODE_ENV=production
+export AWS_REGION=eu-west-1          # Your AWS region
+export LOG_GROUP=roomhop/hotel-api   # Optional: custom log group name
+export LOG_LEVEL=info                # Optional: minimum log level
+```
+
+**Required IAM Permissions:**
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:DescribeLogStreams"
+    ],
+    "Resource": "arn:aws:logs:*:*:log-group:roomhop/*"
+  }]
+}
+```
+
+### Testing Logging Locally
+
+1. Start the API: `cd hotel-api && node src/app.js`
+2. Make a request: `curl http://localhost:3000/v1/search?location=Paris&checkIn=2026-07-15&checkOut=2026-07-20&guests=1`
+3. Check console output — you'll see structured request/response logs
+4. Check `hotel-api/logs/app.log` for JSON-formatted logs
+
+To simulate production logging format locally:
+```bash
+NODE_ENV=production node src/app.js
+```
+
+### Log Levels
+
+| Level | Usage |
+|-------|-------|
+| error | Unhandled exceptions, DB failures, Kafka disconnects |
+| warn  | Validation failures, cancellation policy violations |
+| info  | Request lifecycle, reservations created/cancelled, Kafka events |
+| debug | SQL queries, event payloads, detailed flow tracing |

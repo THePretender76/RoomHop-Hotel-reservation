@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../db');
 const { validateSearchParams } = require('../../middleware/validate');
+const logger = require('../../logger');
 
 // MinIO base URL — image keys are prefixed at response time
 const MINIO_BASE = process.env.MINIO_BASE || 'http://localhost:9000';
@@ -158,7 +159,7 @@ router.get('/', async (req, res) => {
 
     return res.status(200).json({ results });
   } catch (err) {
-    console.error('[v1/search] DB error:', err);
+    logger.error('Search query failed', { function: 'GET /v1/search', error: err.message, stack: err.stack, requestId: req.requestId });
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

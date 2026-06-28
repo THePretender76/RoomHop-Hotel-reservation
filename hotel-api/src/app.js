@@ -3,6 +3,8 @@
 // ==============================
 const express = require('express');
 
+const logger = require('./logger');
+const requestLogger = require('./middleware/requestLogger');
 const searchRoutes = require('./routes/search');
 const v1SearchRoutes = require('./routes/v1/search');
 const v1ReservationRoutes = require('./routes/v1/reservations');
@@ -17,6 +19,9 @@ app.use(cors({
 // ==============================
 // MIDDLEWARE
 // ==============================
+// Request logging — assigns requestId and logs lifecycle
+app.use(requestLogger);
+
 // Permet de lire les JSON envoyés par le client
 app.use(express.json());
 
@@ -33,10 +38,10 @@ app.use('/v1/reservations', v1ReservationRoutes);
 // START SERVER
 // ==============================
 app.listen(3000, () => {
-  console.log('🚀 Hotel API running on port 3000');
+  logger.info('Hotel API started', { port: 3000 });
 });
 
 // ==============================
 // KAFKA INIT (non-blocking)
 // ==============================
-initProducer().catch(err => console.error('[app] Kafka init error:', err));
+initProducer().catch(err => logger.error('Kafka initialization failed', { error: err.message, stack: err.stack }));

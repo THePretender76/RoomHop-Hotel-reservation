@@ -1,9 +1,10 @@
 'use strict';
 
+const logger = require('./logger');
+
 async function sendEmail(to, subject, body) {
-  console.log(`[EmailSender] Sending email to: ${to}`);
-  console.log(`[EmailSender] Subject: ${subject}`);
-  console.log(`[EmailSender] Body: ${body}`);
+  logger.info('Email sent', { to, subject });
+  logger.debug('Email body', { to, body });
 }
 
 module.exports = { sendEmail };

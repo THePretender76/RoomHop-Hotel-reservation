@@ -16,6 +16,7 @@ const { validateReservationBody } = require('../../middleware/validate');
 const { createReservation, cancelReservation } = require('../../services/reservationService');
 const { publish } = require('../../services/kafkaProducer');
 const db = require('../../db');
+const logger = require('../../logger');
 
 const TOPIC = 'hotel.events.reservations';
 
@@ -65,11 +66,19 @@ router.post('/', async (req, res) => {
 
     // 3a. Idempotent replay – already created, return 200
     if (result.existing === true) {
+      logger.info('Idempotent replay returned', { reservationId: result.reservation.reservation_id, requestId: req.requestId });
       return res.status(200).json(result.reservation);
     }
 
     // 3b. Newly created – publish confirmed event (fire-and-forget)
     const reservation = result.reservation;
+
+    logger.info('Reservation created', {
+      reservationId: reservation.reservation_id,
+      guestId: reservation.guest_id,
+      hotelId: reservation.hotel_id,
+      requestId: req.requestId,
+    });
 
     publish(TOPIC, {
       eventType: 'reservation.confirmed',
@@ -88,6 +97,7 @@ router.post('/', async (req, res) => {
     return res.status(201).json(reservation);
   } catch (err) {
     const status = err.status || 500;
+    logger.error('Reservation creation failed', { error: err.message, stack: err.stack, requestId: req.requestId });
     return res.status(status).json({ error: err.message || 'Internal server error' });
   }
 });
@@ -116,6 +126,7 @@ router.get('/', async (req, res) => {
     );
     return res.status(200).json({ reservations: rows });
   } catch (err) {
+    logger.error('Guest reservations lookup failed', { error: err.message, guestId: guest_id, requestId: req.requestId });
     return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
@@ -141,6 +152,7 @@ router.get('/:id', async (req, res) => {
 
     return res.status(200).json({ reservation: rows[0] });
   } catch (err) {
+    logger.error('Reservation detail lookup failed', { error: err.message, reservationId: req.params.id, requestId: req.requestId });
     return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
@@ -154,6 +166,8 @@ router.delete('/:id', async (req, res) => {
 
   try {
     const updatedReservation = await cancelReservation(id);
+
+    logger.info('Reservation cancelled', { reservationId: id, requestId: req.requestId });
 
     // Publish cancellation event (fire-and-forget)
     publish(TOPIC, {
@@ -169,6 +183,7 @@ router.delete('/:id', async (req, res) => {
     const status = err.status && [403, 404, 409].includes(err.status)
       ? err.status
       : 500;
+    logger.error('Reservation cancellation failed', { error: err.message, reservationId: id, requestId: req.requestId });
     return res.status(status).json({ error: err.message || 'Internal server error' });
   }
 });

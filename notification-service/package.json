@@ -9,10 +9,13 @@
     "test": "jest --runInBand"
   },
   "dependencies": {
-    "kafkajs": "2.2.4"
+    "kafkajs": "2.2.4",
+    "uuid": "^14.0.1",
+    "winston": "^3.19.0",
+    "winston-cloudwatch": "^6.3.0"
   },
   "devDependencies": {
-    "jest": "29.7.0",
-    "fast-check": "3.23.2"
+    "fast-check": "3.23.2",
+    "jest": "29.7.0"
   }
 }

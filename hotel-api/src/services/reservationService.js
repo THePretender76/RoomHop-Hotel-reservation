@@ -11,6 +11,7 @@
 // ======================================================
 
 const db = require('../db');
+const logger = require('../logger');
 
 // -------------------------------------------------------
 // createReservation
@@ -32,6 +33,7 @@ async function createReservation(data, idempotencyKey) {
       [idempotencyKey]
     );
     if (existing.length > 0) {
+      logger.debug('Idempotent replay', { idempotencyKey, reservationId: existing[0].reservation_id });
       return { existing: true, reservation: existing[0] };
     }
   }
@@ -60,6 +62,7 @@ async function createReservation(data, idempotencyKey) {
     );
 
     if (inventoryRows.length !== nightCount) {
+      logger.warn('Availability check failed', { hotelId: hotel_id, roomTypeId: room_type_id, reason: 'missing inventory rows' });
       throw {
         status: 409,
         message: 'Insufficient availability for the requested dates and room count',
@@ -72,6 +75,7 @@ async function createReservation(data, idempotencyKey) {
     );
 
     if (minAvailable < room_count) {
+      logger.warn('Availability check failed', { hotelId: hotel_id, roomTypeId: room_type_id, minAvailable, requestedRooms: room_count });
       throw {
         status: 409,
         message: 'Insufficient availability for the requested dates and room count',
@@ -127,6 +131,8 @@ async function createReservation(data, idempotencyKey) {
 
     // ── 9. Commit and return ──
     await conn.commit();
+
+    logger.info('Reservation committed', { reservationId, amount: parseFloat(amount.toFixed(2)), roomCount: room_count, guestId: guest_id });
 
     return {
       existing: false,
@@ -223,6 +229,8 @@ async function cancelReservation(reservationId) {
 
     // ── 7. Commit ──
     await conn.commit();
+
+    logger.info('Reservation cancelled', { reservationId, roomCount: reservation.room_count, guestId: reservation.guest_id });
 
     // Return the updated reservation
     return {

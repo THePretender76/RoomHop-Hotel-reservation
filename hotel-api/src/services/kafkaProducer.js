@@ -1,6 +1,7 @@
 'use strict';
 
 const { Kafka } = require('kafkajs');
+const logger = require('../logger');
 
 const broker = process.env.KAFKA_BROKER || 'localhost:9022';
 
@@ -19,15 +20,9 @@ const producer = kafka.producer();
 async function initProducer() {
   try {
     await producer.connect();
-    console.log(`[kafkaProducer] Connected to Kafka broker at ${broker}`);
+    logger.info('Connected to Kafka broker', { broker });
   } catch (err) {
-    console.error(
-      JSON.stringify({
-        message: '[kafkaProducer] Failed to connect to Kafka',
-        broker,
-        error: err.message,
-      })
-    );
+    logger.error('Failed to connect to Kafka', { broker, error: err.message, stack: err.stack });
   }
 }
 
@@ -44,14 +39,9 @@ async function publish(topic, event) {
       topic,
       messages: [{ value: JSON.stringify(event) }],
     });
+    logger.debug('Event published to Kafka', { topic, eventType: event.eventType });
   } catch (err) {
-    console.error(
-      JSON.stringify({
-        error: err.message,
-        topic,
-        event,
-      })
-    );
+    logger.error('Kafka publish failed', { topic, error: err.message, stack: err.stack });
   }
 }
 
