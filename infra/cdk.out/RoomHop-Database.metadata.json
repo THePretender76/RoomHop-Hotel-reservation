@@ -1,0 +1,215 @@
+{
+  "/RoomHop-Database": [
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "...node internals, ts-node, ts-node, ts-node..."
+      ]
+    },
+    {
+      "type": "aws:cdk:warning",
+      "data": "No cross-stack-reference strength configured, defaulting to \"strong\". We recommend you set feature flag \"@aws-cdk/core:defaultCrossStackReferences\" to \"both\", then deploy everywhere, then set it to \"weak\". Alternatively, set it to \"strong\" explicitly to lock in the current producer-protecting behavior. (See: https://github.com/aws/aws-cdk/blob/main/packages/aws-cdk-lib/README.md#reference-strength) [ack: @aws-cdk/core:crossStackReferencesDefaultStrong]",
+      "trace": [
+        "Annotations.addMessage (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\annotations.js:1:3441)",
+        "Annotations.addWarningV2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\annotations.js:1:2129)",
+        "resolveValue (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\private\\refs.js:1:6065)",
+        "resolveReferences (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\private\\refs.js:1:4778)",
+        "prepareApp (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\private\\prepare-app.js:1:1514)",
+        "synthesize (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\private\\synthesis.js:1:3580)",
+        "App.synth (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\stage.js:1:4636)",
+        "App.synth (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\app.js:1:4814)",
+        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "Module._compile (node:internal/modules/cjs/loader:1812:14)",
+        "Module.m._compile (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\index.ts:1618:23)",
+        "node:internal/modules/cjs/loader:1943:10",
+        "Object.require.extensions.<computed> [as .ts] (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\index.ts:1621:12)",
+        "Module.load (node:internal/modules/cjs/loader:1533:32)",
+        "Module._load (node:internal/modules/cjs/loader:1335:12)",
+        "wrapModuleLoad (node:internal/modules/cjs/loader:255:19)",
+        "Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)",
+        "phase4 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\bin.ts:649:14)",
+        "bootstrap (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\bin.ts:95:10)",
+        "main (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\bin.ts:55:10)",
+        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\bin.ts:800:3)",
+        "Module._compile (node:internal/modules/cjs/loader:1812:14)",
+        "Object.<anonymous> (node:internal/modules/cjs/loader:1943:10)",
+        "Module.load (node:internal/modules/cjs/loader:1533:32)",
+        "Module._load (node:internal/modules/cjs/loader:1335:12)",
+        "wrapModuleLoad (node:internal/modules/cjs/loader:255:19)",
+        "Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)",
+        "node:internal/main/run_main_module:33:47"
+      ]
+    }
+  ],
+  "/RoomHop-Database/DbEndpoint": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbEndpoint"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:67:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Database/DbSecretArn": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbSecretArn"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:72:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Database/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/RoomHop-Database/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/RoomHop-Database/DbParamGroup/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbParamGroup0FA6B363"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:26:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Database/RoomHopDb/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopDbE208ABCA"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:26:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Database/CDKMetadata/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CDKMetadata"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...App.synth in aws-cdk-lib...",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Database/Exports/Output{\"Ref\":\"RoomHopDbSecretAttachment273AC49D\"}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputRefRoomHopDbSecretAttachment273AC49D03471222"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...App.synth in aws-cdk-lib...",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Database/Exports/Output{\"Fn::GetAtt\":[\"RoomHopDbE208ABCA\",\"Endpoint.Address\"]}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputFnGetAttRoomHopDbE208ABCAEndpointAddressA34827BE"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...App.synth in aws-cdk-lib...",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Database/RoomHopDb/SubnetGroup/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopDbSubnetGroup6841F33D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:26:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Database/RoomHopDb/Secret/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopDatabaseRoomHopDbSecretC99921103fdaad7efa858a3daf9490cf0a702aeb"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:26:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)"
+      ]
+    }
+  ],
+  "/RoomHop-Database/RoomHopDb/Secret/Attachment/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopDbSecretAttachment273AC49D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new DatabaseInstance2 in aws-cdk-lib...",
+        "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:26:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ]
+}

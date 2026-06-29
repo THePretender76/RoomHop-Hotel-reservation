@@ -1,0 +1,36 @@
+{
+  "version": "54.0.0",
+  "files": {
+    "2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d": {
+      "displayName": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/Code",
+      "source": {
+        "path": "asset.2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "370314719865-eu-west-1-5c652d46": {
+          "bucketName": "cdk-hnb659fds-assets-370314719865-eu-west-1",
+          "objectKey": "2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d.zip",
+          "region": "eu-west-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::370314719865:role/cdk-hnb659fds-file-publishing-role-370314719865-eu-west-1"
+        }
+      }
+    },
+    "afdf75bb83f643c2c6734619de867bba26dbb26c7d419a1f12a71812ad57ced1": {
+      "displayName": "RoomHop-Events Template",
+      "source": {
+        "path": "RoomHop-Events.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "370314719865-eu-west-1-2f19a4b1": {
+          "bucketName": "cdk-hnb659fds-assets-370314719865-eu-west-1",
+          "objectKey": "afdf75bb83f643c2c6734619de867bba26dbb26c7d419a1f12a71812ad57ced1.json",
+          "region": "eu-west-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::370314719865:role/cdk-hnb659fds-file-publishing-role-370314719865-eu-west-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

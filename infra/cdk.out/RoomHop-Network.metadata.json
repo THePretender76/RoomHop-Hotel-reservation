@@ -1,0 +1,531 @@
+{
+  "/RoomHop-Network": [
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/VpcId": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "VpcId"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:149:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/RoomHop-Network/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpc32D1FA7F"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Vpc2 in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:29:16)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/EndpointSg/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "EndpointSg9223A863"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new SecurityGroup2 in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:45:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/AlbSg/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AlbSg1155C1BE"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new SecurityGroup2 in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:57:19)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/EcsSg/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "EcsSg17B4B0B3"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new SecurityGroup2 in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:70:19)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/EcsSg/from RoomHopNetworkAlbSgCDC79CE0:3000": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "EcsSgfromRoomHopNetworkAlbSgCDC79CE030003E708D24"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.<anonymous> in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:75:11)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RdsSg/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RdsSg7F9F43B6"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new SecurityGroup2 in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:82:19)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RdsSg/from RoomHopNetworkEcsSg5CC43C05:3306": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RdsSgfromRoomHopNetworkEcsSg5CC43C053306F188A8A4"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.<anonymous> in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:87:11)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/OpenSearchSg/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "OpenSearchSg98CA9349"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new SecurityGroup2 in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:94:26)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/OpenSearchSg/from RoomHopNetworkEcsSg5CC43C05:443": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "OpenSearchSgfromRoomHopNetworkEcsSg5CC43C05443E58D9B23"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.<anonymous> in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:99:18)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/LambdaSg/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "LambdaSg30A6108C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new SecurityGroup2 in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:106:22)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/CDKMetadata/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CDKMetadata"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...App.synth in aws-cdk-lib...",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/Exports/Output{\"Ref\":\"RoomHopVpcPrivateSubnet1SubnetF4CFC437\"}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputRefRoomHopVpcPrivateSubnet1SubnetF4CFC437D54E75B2"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...App.synth in aws-cdk-lib...",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/Exports/Output{\"Ref\":\"RoomHopVpcPrivateSubnet2Subnet2E0B0C6F\"}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputRefRoomHopVpcPrivateSubnet2Subnet2E0B0C6F2C8C1A50"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...App.synth in aws-cdk-lib...",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/Exports/Output{\"Fn::GetAtt\":[\"RdsSg7F9F43B6\",\"GroupId\"]}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputFnGetAttRdsSg7F9F43B6GroupId133E31A8"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...App.synth in aws-cdk-lib...",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/Exports/Output{\"Fn::GetAtt\":[\"OpenSearchSg98CA9349\",\"GroupId\"]}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputFnGetAttOpenSearchSg98CA9349GroupId88A48A6B"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...App.synth in aws-cdk-lib...",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/Exports/Output{\"Fn::GetAtt\":[\"AlbSg1155C1BE\",\"GroupId\"]}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputFnGetAttAlbSg1155C1BEGroupIdF2A72E65"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...App.synth in aws-cdk-lib...",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/Exports/Output{\"Fn::GetAtt\":[\"EcsSg17B4B0B3\",\"GroupId\"]}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputFnGetAttEcsSg17B4B0B3GroupIdF7EB5B8E"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...App.synth in aws-cdk-lib...",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/Exports/Output{\"Ref\":\"RoomHopVpc32D1FA7F\"}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputRefRoomHopVpc32D1FA7FAEF44D68"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...App.synth in aws-cdk-lib...",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/Exports/Output{\"Fn::GetAtt\":[\"LambdaSg30A6108C\",\"GroupId\"]}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExportsOutputFnGetAttLambdaSg30A6108CGroupId30BB2F0D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...App.synth in aws-cdk-lib...",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/PrivateSubnet1/Subnet": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ec2\\lib\\vpc.js:1:272 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/PrivateSubnet1/RouteTable": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcPrivateSubnet1RouteTable277CE95E"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ec2\\lib\\vpc.js:1:272 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/PrivateSubnet1/RouteTableAssociation": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcPrivateSubnet1RouteTableAssociation896D50F5"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ec2\\lib\\vpc.js:1:272 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/PrivateSubnet2/Subnet": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ec2\\lib\\vpc.js:1:272 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/PrivateSubnet2/RouteTable": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcPrivateSubnet2RouteTable4A07FCCE"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ec2\\lib\\vpc.js:1:272 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/PrivateSubnet2/RouteTableAssociation": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcPrivateSubnet2RouteTableAssociation9D15E547"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ec2\\lib\\vpc.js:1:272 in aws-cdk-lib...",
+        "Array.forEach (:)",
+        "...aws-cdk-lib..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/S3Endpoint/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcS3Endpoint3D5697F1"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addGatewayEndpoint in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:123:14)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/EcrApiEndpoint/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcEcrApiEndpointB304A89D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addInterfaceEndpoint in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:140:16)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/EcrDkrEndpoint/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcEcrDkrEndpointF1FD3627"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addInterfaceEndpoint in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:140:16)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/CloudWatchLogsEndpoint/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcCloudWatchLogsEndpoint9A64E986"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addInterfaceEndpoint in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:140:16)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/SecretsManagerEndpoint/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcSecretsManagerEndpoint0E4CABDC"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addInterfaceEndpoint in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:140:16)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/EventBridgeEndpoint/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcEventBridgeEndpoint414C3F58"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addInterfaceEndpoint in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:140:16)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/SqsEndpoint/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcSqsEndpoint8E39B53B"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addInterfaceEndpoint in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:140:16)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/RoomHop-Network/RoomHopVpc/SesEndpoint/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RoomHopVpcSesEndpoint0D7CBA40"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addInterfaceEndpoint in aws-cdk-lib...",
+        "new NetworkStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\network-stack.ts:140:16)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:23:22)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "version": "54.0.0",
+  "files": {
+    "51bba972b6710a8da8fc0a4a35b6a38df4874307aafb0cfc2a11d0f27ff1bd10": {
+      "displayName": "RoomHop-Frontend Template",
+      "source": {
+        "path": "RoomHop-Frontend.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "370314719865-eu-west-1-af56692b": {
+          "bucketName": "cdk-hnb659fds-assets-370314719865-eu-west-1",
+          "objectKey": "51bba972b6710a8da8fc0a4a35b6a38df4874307aafb0cfc2a11d0f27ff1bd10.json",
+          "region": "eu-west-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::370314719865:role/cdk-hnb659fds-file-publishing-role-370314719865-eu-west-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

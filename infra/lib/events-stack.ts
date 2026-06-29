@@ -1,0 +1,287 @@
+import * as cdk from 'aws-cdk-lib';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import { Construct } from 'constructs';
+import { CONFIG } from './config';
+import { SecurityGroups } from './network-stack';
+
+export interface EventsStackProps extends cdk.StackProps {
+  vpc: ec2.Vpc;
+  securityGroups: SecurityGroups;
+}
+
+export class EventsStack extends cdk.Stack {
+  public readonly analyticsBucket: s3.Bucket;
+  public readonly eventBus: events.EventBus;
+
+  constructor(scope: Construct, id: string, props: EventsStackProps) {
+    super(scope, id, props);
+
+    const { vpc, securityGroups } = props;
+
+    // ─── Analytics Data Lake Bucket ─────────────────────────────────────────────
+    this.analyticsBucket = new s3.Bucket(this, 'AnalyticsBucket', {
+      bucketName: `${CONFIG.s3.analyticsBucket}-${cdk.Aws.ACCOUNT_ID}`,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      versioned: false,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      lifecycleRules: [
+        {
+          // Move old analytics data to Glacier after 90 days
+          transitions: [
+            {
+              storageClass: s3.StorageClass.GLACIER,
+              transitionAfter: cdk.Duration.days(90),
+            },
+          ],
+        },
+      ],
+    });
+
+    // ─── EventBridge Custom Event Bus ───────────────────────────────────────────
+    this.eventBus = new events.EventBus(this, 'RoomHopEventBus', {
+      eventBusName: `${CONFIG.projectName}-events`,
+    });
+
+    // Archive all events for replay capability
+    this.eventBus.archive('EventArchive', {
+      archiveName: `${CONFIG.projectName}-event-archive`,
+      description: 'Archive of all RoomHop booking events',
+      eventPattern: {
+        source: ['roomhop.reservation'],
+      },
+      retention: cdk.Duration.days(365),
+    });
+
+    // ─── SQS Queues ─────────────────────────────────────────────────────────────
+
+    // Notification DLQ
+    const notificationDlq = new sqs.Queue(this, 'NotificationDlq', {
+      queueName: `${CONFIG.projectName}-notification-dlq`,
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
+    });
+
+    // Notification Queue — triggers email notifications via SES
+    const notificationQueue = new sqs.Queue(this, 'NotificationQueue', {
+      queueName: `${CONFIG.projectName}-notification-queue`,
+      visibilityTimeout: cdk.Duration.seconds(60),
+      retentionPeriod: cdk.Duration.days(7),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
+      deadLetterQueue: {
+        queue: notificationDlq,
+        maxReceiveCount: 3,
+      },
+    });
+
+    // Analytics DLQ
+    const analyticsDlq = new sqs.Queue(this, 'AnalyticsDlq', {
+      queueName: `${CONFIG.projectName}-analytics-dlq`,
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
+    });
+
+    // Analytics Queue — triggers S3 writes for BI
+    const analyticsQueue = new sqs.Queue(this, 'AnalyticsQueue', {
+      queueName: `${CONFIG.projectName}-analytics-queue`,
+      visibilityTimeout: cdk.Duration.seconds(120),
+      retentionPeriod: cdk.Duration.days(7),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
+      deadLetterQueue: {
+        queue: analyticsDlq,
+        maxReceiveCount: 3,
+      },
+    });
+
+    // ─── EventBridge Rule ───────────────────────────────────────────────────────
+    // Matches booking events and fans out to both queues.
+    const bookingRule = new events.Rule(this, 'BookingEventsRule', {
+      eventBus: this.eventBus,
+      ruleName: `${CONFIG.projectName}-booking-events`,
+      description: 'Routes booking confirmation and cancellation events',
+      eventPattern: {
+        source: ['roomhop.reservation'],
+        detailType: ['BookingConfirmed', 'BookingCancelled'],
+      },
+    });
+
+    bookingRule.addTarget(new eventsTargets.SqsQueue(notificationQueue));
+    bookingRule.addTarget(new eventsTargets.SqsQueue(analyticsQueue));
+
+    // ─── Lambda: Notification Handler ───────────────────────────────────────────
+    // Sends booking confirmation/cancellation emails via SES.
+    const notificationLambda = new lambda.Function(this, 'NotificationHandler', {
+      functionName: `${CONFIG.projectName}-notification-handler`,
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromInline(`
+const { SESv2Client, SendEmailCommand } = require('@aws-sdk/client-sesv2');
+
+const sesClient = new SESv2Client({});
+
+exports.handler = async (event) => {
+  for (const record of event.Records) {
+    const body = JSON.parse(record.body);
+    const detail = body.detail || body;
+    const detailType = body['detail-type'] || 'BookingConfirmed';
+    
+    const subject = detailType === 'BookingConfirmed'
+      ? 'Booking Confirmation - RoomHop'
+      : 'Booking Cancellation - RoomHop';
+    
+    const emailBody = detailType === 'BookingConfirmed'
+      ? \`Dear \${detail.guestName},\\n\\nYour booking (ID: \${detail.reservationId}) has been confirmed.\\nCheck-in: \${detail.checkIn}\\nCheck-out: \${detail.checkOut}\\n\\nThank you for choosing RoomHop!\`
+      : \`Dear \${detail.guestName},\\n\\nYour booking (ID: \${detail.reservationId}) has been cancelled.\\n\\nWe hope to see you again soon.\`;
+
+    try {
+      await sesClient.send(new SendEmailCommand({
+        FromEmailAddress: 'noreply@roomhop.com',
+        Destination: { ToAddresses: [detail.guestEmail] },
+        Content: {
+          Simple: {
+            Subject: { Data: subject },
+            Body: { Text: { Data: emailBody } },
+          },
+        },
+      }));
+      console.log(\`Email sent to \${detail.guestEmail} for \${detailType}\`);
+    } catch (error) {
+      console.error('Failed to send email:', error);
+      throw error;
+    }
+  }
+};
+`),
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [securityGroups.lambdaSg],
+      environment: {
+        REGION: CONFIG.region,
+      },
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+
+    // Grant SES send permissions
+    notificationLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+        resources: ['*'],
+      })
+    );
+
+    // Wire SQS → Lambda
+    notificationLambda.addEventSource(
+      new lambdaEventSources.SqsEventSource(notificationQueue, {
+        batchSize: 10,
+        maxBatchingWindow: cdk.Duration.seconds(5),
+      })
+    );
+
+    // ─── Lambda: Analytics Handler ──────────────────────────────────────────────
+    // Writes booking event data to S3 as JSON for Athena queries.
+    const analyticsLambda = new lambda.Function(this, 'AnalyticsHandler', {
+      functionName: `${CONFIG.projectName}-analytics-handler`,
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromInline(`
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+
+const s3Client = new S3Client({});
+const BUCKET = process.env.ANALYTICS_BUCKET;
+
+exports.handler = async (event) => {
+  for (const record of event.Records) {
+    const body = JSON.parse(record.body);
+    const detail = body.detail || body;
+    const detailType = body['detail-type'] || 'Unknown';
+    const timestamp = new Date().toISOString();
+    const date = timestamp.split('T')[0];
+    
+    // Partition by date and event type for efficient Athena queries
+    const key = \`reservations/year=\${date.split('-')[0]}/month=\${date.split('-')[1]}/day=\${date.split('-')[2]}/\${detailType}_\${detail.reservationId || Date.now()}.json\`;
+    
+    const record_data = {
+      eventType: detailType,
+      reservationId: detail.reservationId,
+      guestEmail: detail.guestEmail,
+      guestName: detail.guestName,
+      hotelId: detail.hotelId,
+      roomType: detail.roomType,
+      checkIn: detail.checkIn,
+      checkOut: detail.checkOut,
+      totalAmount: detail.totalAmount,
+      currency: detail.currency || 'EUR',
+      timestamp,
+    };
+
+    try {
+      await s3Client.send(new PutObjectCommand({
+        Bucket: BUCKET,
+        Key: key,
+        Body: JSON.stringify(record_data),
+        ContentType: 'application/json',
+      }));
+      console.log(\`Analytics record written: \${key}\`);
+    } catch (error) {
+      console.error('Failed to write analytics record:', error);
+      throw error;
+    }
+  }
+};
+`),
+      timeout: cdk.Duration.seconds(60),
+      memorySize: 256,
+      vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [securityGroups.lambdaSg],
+      environment: {
+        ANALYTICS_BUCKET: this.analyticsBucket.bucketName,
+        REGION: CONFIG.region,
+      },
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+
+    // Grant S3 write access to analytics bucket
+    this.analyticsBucket.grantWrite(analyticsLambda);
+
+    // Wire SQS → Lambda
+    analyticsLambda.addEventSource(
+      new lambdaEventSources.SqsEventSource(analyticsQueue, {
+        batchSize: 10,
+        maxBatchingWindow: cdk.Duration.seconds(30),
+      })
+    );
+
+    // ─── Outputs ────────────────────────────────────────────────────────────────
+    new cdk.CfnOutput(this, 'EventBusName', {
+      value: this.eventBus.eventBusName,
+      description: 'Custom EventBridge event bus name',
+    });
+
+    new cdk.CfnOutput(this, 'NotificationQueueUrl', {
+      value: notificationQueue.queueUrl,
+      description: 'SQS notification queue URL',
+    });
+
+    new cdk.CfnOutput(this, 'AnalyticsQueueUrl', {
+      value: analyticsQueue.queueUrl,
+      description: 'SQS analytics queue URL',
+    });
+
+    new cdk.CfnOutput(this, 'AnalyticsBucketName', {
+      value: this.analyticsBucket.bucketName,
+      description: 'S3 analytics data lake bucket',
+    });
+  }
+}

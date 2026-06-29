@@ -1,0 +1,481 @@
+{
+ "Resources": {
+  "RoomHopVpcLink51D53421": {
+   "Type": "AWS::ApiGatewayV2::VpcLink",
+   "Properties": {
+    "Name": "roomhop-vpc-link",
+    "SecurityGroupIds": [],
+    "SubnetIds": [
+     {
+      "Fn::ImportValue": "RoomHop-Network:ExportsOutputRefRoomHopVpcPrivateSubnet1SubnetF4CFC437D54E75B2"
+     },
+     {
+      "Fn::ImportValue": "RoomHop-Network:ExportsOutputRefRoomHopVpcPrivateSubnet2Subnet2E0B0C6F2C8C1A50"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopVpcLink/Resource"
+   }
+  },
+  "RoomHopHttpApi9210E602": {
+   "Type": "AWS::ApiGatewayV2::Api",
+   "Properties": {
+    "CorsConfiguration": {
+     "AllowHeaders": [
+      "Content-Type",
+      "Authorization",
+      "X-Request-Id"
+     ],
+     "AllowMethods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE",
+      "OPTIONS"
+     ],
+     "AllowOrigins": [
+      "*"
+     ],
+     "MaxAge": 3600
+    },
+    "Description": "RoomHop Hotel Management HTTP API",
+    "Name": "roomhop-api",
+    "ProtocolType": "HTTP"
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/Resource"
+   }
+  },
+  "RoomHopHttpApiDefaultStage8B534690": {
+   "Type": "AWS::ApiGatewayV2::Stage",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AutoDeploy": true,
+    "StageName": "$default"
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/DefaultStage/Resource"
+   }
+  },
+  "RoomHopHttpApiGETv1searchAlbIntegration417049CD": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "ConnectionId": {
+     "Ref": "RoomHopVpcLink51D53421"
+    },
+    "ConnectionType": "VPC_LINK",
+    "IntegrationMethod": "ANY",
+    "IntegrationType": "HTTP_PROXY",
+    "IntegrationUri": {
+     "Fn::ImportValue": "RoomHop-Compute:ExportsOutputRefInternalAlbHttpListener0AAACE8D9BF26B7E"
+    },
+    "PayloadFormatVersion": "1.0"
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/GET--v1--search/AlbIntegration/Resource"
+   }
+  },
+  "RoomHopHttpApiGETv1search0D6C4729": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "GET /v1/search",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/GET--v1--search/Resource"
+   }
+  },
+  "RoomHopHttpApiGETv1searchproxy753099A5": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "GET /v1/search/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/GET--v1--search--{proxy+}/Resource"
+   }
+  },
+  "RoomHopHttpApiGETv1reservationsD9F1FE43": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
+    },
+    "RouteKey": "GET /v1/reservations",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/GET--v1--reservations/Resource"
+   }
+  },
+  "RoomHopHttpApiCognitoAuthorizer0C2794F4": {
+   "Type": "AWS::ApiGatewayV2::Authorizer",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AuthorizerType": "JWT",
+    "IdentitySource": [
+     "$request.header.Authorization"
+    ],
+    "JwtConfiguration": {
+     "Audience": [
+      {
+       "Fn::ImportValue": "RoomHop-Auth:ExportsOutputRefRoomHopUserPoolWebAppClient1D68DF5213C0EAD7"
+      }
+     ],
+     "Issuer": {
+      "Fn::Join": [
+       "",
+       [
+        "https://cognito-idp.eu-west-1.amazonaws.com/",
+        {
+         "Fn::ImportValue": "RoomHop-Auth:ExportsOutputRefRoomHopUserPoolC17007352E3CF560"
+        }
+       ]
+      ]
+     }
+    },
+    "Name": "CognitoAuthorizer"
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/CognitoAuthorizer/Resource"
+   }
+  },
+  "RoomHopHttpApiPOSTv1reservations303847E9": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
+    },
+    "RouteKey": "POST /v1/reservations",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/POST--v1--reservations/Resource"
+   }
+  },
+  "RoomHopHttpApiGETv1reservationsproxy5B3D3694": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
+    },
+    "RouteKey": "GET /v1/reservations/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/GET--v1--reservations--{proxy+}/Resource"
+   }
+  },
+  "RoomHopHttpApiDELETEv1reservationsproxy2C1B026F": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
+    },
+    "RouteKey": "DELETE /v1/reservations/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/DELETE--v1--reservations--{proxy+}/Resource"
+   }
+  },
+  "RoomHopHttpApiPUTv1reservationsproxy687D5AAD": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
+    },
+    "RouteKey": "PUT /v1/reservations/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/PUT--v1--reservations--{proxy+}/Resource"
+   }
+  },
+  "RoomHopHttpApiGETv1adminproxyC5BB2991": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
+    },
+    "RouteKey": "GET /v1/admin/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/GET--v1--admin--{proxy+}/Resource"
+   }
+  },
+  "RoomHopHttpApiPOSTv1adminproxyD0654040": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
+    },
+    "RouteKey": "POST /v1/admin/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/POST--v1--admin--{proxy+}/Resource"
+   }
+  },
+  "RoomHopHttpApiPUTv1adminproxyC6C23693": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
+    },
+    "RouteKey": "PUT /v1/admin/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/PUT--v1--admin--{proxy+}/Resource"
+   }
+  },
+  "RoomHopHttpApiDELETEv1adminproxy675BC849": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "RoomHopHttpApi9210E602"
+    },
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
+    },
+    "RouteKey": "DELETE /v1/admin/{proxy+}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/DELETE--v1--admin--{proxy+}/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12MwQqCQBRFv8W9vnSQ9tKmIAgU2sZLJ3taM8PMG6XEf49JKmh17zlcrgCxTiGNcHRJ3fTJjc4wVYx1H+PoTmioRZYjPgYB09HUe1J9vLmoT90ym8JQUCECVoytDGIpQZXa89J2imVrkUmrMPnD367wfNWWntK+r780Bzx4Np7nWOlGQudWg8ghyyGLOkeUWK+Y7hLKJV+XQaAX4gAAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Api/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "ApiEndpoint": {
+   "Description": "HTTP API endpoint URL",
+   "Value": {
+    "Fn::GetAtt": [
+     "RoomHopHttpApi9210E602",
+     "ApiEndpoint"
+    ]
+   }
+  },
+  "VpcLinkId": {
+   "Description": "VPC Link ID",
+   "Value": {
+    "Ref": "RoomHopVpcLink51D53421"
+   }
+  },
+  "ExportsOutputFnGetAttRoomHopHttpApi9210E602ApiEndpoint217F0C84": {
+   "Value": {
+    "Fn::GetAtt": [
+     "RoomHopHttpApi9210E602",
+     "ApiEndpoint"
+    ]
+   },
+   "Export": {
+    "Name": "RoomHop-Api:ExportsOutputFnGetAttRoomHopHttpApi9210E602ApiEndpoint217F0C84"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

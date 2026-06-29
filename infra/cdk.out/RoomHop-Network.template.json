@@ -1,0 +1,800 @@
+{
+ "Resources": {
+  "RoomHopVpc32D1FA7F": {
+   "Type": "AWS::EC2::VPC",
+   "Properties": {
+    "CidrBlock": "10.0.0.0/16",
+    "EnableDnsHostnames": true,
+    "EnableDnsSupport": true,
+    "InstanceTenancy": "default",
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/Resource"
+   }
+  },
+  "RoomHopVpcPrivateSubnet1SubnetF4CFC437": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "eu-west-1a",
+    "CidrBlock": "10.0.0.0/24",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "Private"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Isolated"
+     },
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc/PrivateSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/PrivateSubnet1/Subnet"
+   }
+  },
+  "RoomHopVpcPrivateSubnet1RouteTable277CE95E": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc/PrivateSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/PrivateSubnet1/RouteTable"
+   }
+  },
+  "RoomHopVpcPrivateSubnet1RouteTableAssociation896D50F5": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "RoomHopVpcPrivateSubnet1RouteTable277CE95E"
+    },
+    "SubnetId": {
+     "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/PrivateSubnet1/RouteTableAssociation"
+   }
+  },
+  "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "eu-west-1b",
+    "CidrBlock": "10.0.1.0/24",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "Private"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Isolated"
+     },
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc/PrivateSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/PrivateSubnet2/Subnet"
+   }
+  },
+  "RoomHopVpcPrivateSubnet2RouteTable4A07FCCE": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc/PrivateSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/PrivateSubnet2/RouteTable"
+   }
+  },
+  "RoomHopVpcPrivateSubnet2RouteTableAssociation9D15E547": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "RoomHopVpcPrivateSubnet2RouteTable4A07FCCE"
+    },
+    "SubnetId": {
+     "Ref": "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/PrivateSubnet2/RouteTableAssociation"
+   }
+  },
+  "RoomHopVpcS3Endpoint3D5697F1": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "RouteTableIds": [
+     {
+      "Ref": "RoomHopVpcPrivateSubnet1RouteTable277CE95E"
+     },
+     {
+      "Ref": "RoomHopVpcPrivateSubnet2RouteTable4A07FCCE"
+     }
+    ],
+    "ServiceName": {
+     "Fn::Join": [
+      "",
+      [
+       "com.amazonaws.",
+       {
+        "Ref": "AWS::Region"
+       },
+       ".s3"
+      ]
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc"
+     }
+    ],
+    "VpcEndpointType": "Gateway",
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/S3Endpoint/Resource"
+   }
+  },
+  "RoomHopVpcEcrApiEndpointB304A89D": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "EndpointSg9223A863",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": "com.amazonaws.eu-west-1.ecr.api",
+    "SubnetIds": [
+     {
+      "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
+     },
+     {
+      "Ref": "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/EcrApiEndpoint/Resource"
+   }
+  },
+  "RoomHopVpcEcrDkrEndpointF1FD3627": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "EndpointSg9223A863",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": "com.amazonaws.eu-west-1.ecr.dkr",
+    "SubnetIds": [
+     {
+      "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
+     },
+     {
+      "Ref": "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/EcrDkrEndpoint/Resource"
+   }
+  },
+  "RoomHopVpcCloudWatchLogsEndpoint9A64E986": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "EndpointSg9223A863",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": "com.amazonaws.eu-west-1.logs",
+    "SubnetIds": [
+     {
+      "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
+     },
+     {
+      "Ref": "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/CloudWatchLogsEndpoint/Resource"
+   }
+  },
+  "RoomHopVpcSecretsManagerEndpoint0E4CABDC": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "EndpointSg9223A863",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": "com.amazonaws.eu-west-1.secretsmanager",
+    "SubnetIds": [
+     {
+      "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
+     },
+     {
+      "Ref": "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/SecretsManagerEndpoint/Resource"
+   }
+  },
+  "RoomHopVpcEventBridgeEndpoint414C3F58": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "EndpointSg9223A863",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": "com.amazonaws.eu-west-1.events",
+    "SubnetIds": [
+     {
+      "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
+     },
+     {
+      "Ref": "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/EventBridgeEndpoint/Resource"
+   }
+  },
+  "RoomHopVpcSqsEndpoint8E39B53B": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "EndpointSg9223A863",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": "com.amazonaws.eu-west-1.sqs",
+    "SubnetIds": [
+     {
+      "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
+     },
+     {
+      "Ref": "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/SqsEndpoint/Resource"
+   }
+  },
+  "RoomHopVpcSesEndpoint0D7CBA40": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "EndpointSg9223A863",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": "com.amazonaws.eu-west-1.email-smtp",
+    "SubnetIds": [
+     {
+      "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
+     },
+     {
+      "Ref": "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/SesEndpoint/Resource"
+   }
+  },
+  "EndpointSg9223A863": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for VPC Interface Endpoints",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": "10.0.0.0/16",
+      "Description": "Allow HTTPS from VPC for endpoint access",
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     },
+     {
+      "CidrIp": {
+       "Fn::GetAtt": [
+        "RoomHopVpc32D1FA7F",
+        "CidrBlock"
+       ]
+      },
+      "Description": {
+       "Fn::Join": [
+        "",
+        [
+         "from ",
+         {
+          "Fn::GetAtt": [
+           "RoomHopVpc32D1FA7F",
+           "CidrBlock"
+          ]
+         },
+         ":443"
+        ]
+       ]
+      },
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     }
+    ],
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/EndpointSg/Resource"
+   }
+  },
+  "AlbSg1155C1BE": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for internal ALB",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": "10.0.0.0/16",
+      "Description": "Allow HTTP from VPC Link (API Gateway)",
+      "FromPort": 80,
+      "IpProtocol": "tcp",
+      "ToPort": 80
+     },
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow from anyone on port 80",
+      "FromPort": 80,
+      "IpProtocol": "tcp",
+      "ToPort": 80
+     }
+    ],
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/AlbSg/Resource"
+   }
+  },
+  "EcsSg17B4B0B3": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for ECS Fargate tasks",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/EcsSg/Resource"
+   }
+  },
+  "EcsSgfromRoomHopNetworkAlbSgCDC79CE030003E708D24": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Allow traffic from ALB on application port",
+    "FromPort": 3000,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "EcsSg17B4B0B3",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "AlbSg1155C1BE",
+      "GroupId"
+     ]
+    },
+    "ToPort": 3000
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/EcsSg/from RoomHopNetworkAlbSgCDC79CE0:3000"
+   }
+  },
+  "RdsSg7F9F43B6": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for RDS MySQL",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "255.255.255.255/32",
+      "Description": "Disallow all traffic",
+      "FromPort": 252,
+      "IpProtocol": "icmp",
+      "ToPort": 86
+     }
+    ],
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RdsSg/Resource"
+   }
+  },
+  "RdsSgfromRoomHopNetworkEcsSg5CC43C053306F188A8A4": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Allow MySQL from ECS tasks only",
+    "FromPort": 3306,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "RdsSg7F9F43B6",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "EcsSg17B4B0B3",
+      "GroupId"
+     ]
+    },
+    "ToPort": 3306
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RdsSg/from RoomHopNetworkEcsSg5CC43C05:3306"
+   }
+  },
+  "OpenSearchSg98CA9349": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for OpenSearch domain",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "255.255.255.255/32",
+      "Description": "Disallow all traffic",
+      "FromPort": 252,
+      "IpProtocol": "icmp",
+      "ToPort": 86
+     }
+    ],
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/OpenSearchSg/Resource"
+   }
+  },
+  "OpenSearchSgfromRoomHopNetworkEcsSg5CC43C05443E58D9B23": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Allow HTTPS from ECS tasks only",
+    "FromPort": 443,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "OpenSearchSg98CA9349",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "EcsSg17B4B0B3",
+      "GroupId"
+     ]
+    },
+    "ToPort": 443
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/OpenSearchSg/from RoomHopNetworkEcsSg5CC43C05:443"
+   }
+  },
+  "LambdaSg30A6108C": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for Lambda functions in VPC",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/LambdaSg/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/32OQYvCQAyFf4v36ahFvIss4klppdclTeMSq5lhkrGI+N+XdZetJ0/vvY9H8kpfLmd+NoFBC+z64sytv9cG2DsY9JOw9Pcmolsfpdmv3T7xFYzq3ArZDxxdFbLRAdozjXxkK9WADMZB3AaMBrg1ET+ki4HF/s7/x60YpSMgvXZqwpzYbpsUcnz+eAu28pVI9eEq0pATPmftssVsDyehI3/S6bVc+PnCzycnZS5SFuML+epXvwE/Xk9wHAEAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "VpcId": {
+   "Value": {
+    "Ref": "RoomHopVpc32D1FA7F"
+   }
+  },
+  "ExportsOutputRefRoomHopVpcPrivateSubnet1SubnetF4CFC437D54E75B2": {
+   "Value": {
+    "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
+   },
+   "Export": {
+    "Name": "RoomHop-Network:ExportsOutputRefRoomHopVpcPrivateSubnet1SubnetF4CFC437D54E75B2"
+   }
+  },
+  "ExportsOutputRefRoomHopVpcPrivateSubnet2Subnet2E0B0C6F2C8C1A50": {
+   "Value": {
+    "Ref": "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F"
+   },
+   "Export": {
+    "Name": "RoomHop-Network:ExportsOutputRefRoomHopVpcPrivateSubnet2Subnet2E0B0C6F2C8C1A50"
+   }
+  },
+  "ExportsOutputFnGetAttRdsSg7F9F43B6GroupId133E31A8": {
+   "Value": {
+    "Fn::GetAtt": [
+     "RdsSg7F9F43B6",
+     "GroupId"
+    ]
+   },
+   "Export": {
+    "Name": "RoomHop-Network:ExportsOutputFnGetAttRdsSg7F9F43B6GroupId133E31A8"
+   }
+  },
+  "ExportsOutputFnGetAttOpenSearchSg98CA9349GroupId88A48A6B": {
+   "Value": {
+    "Fn::GetAtt": [
+     "OpenSearchSg98CA9349",
+     "GroupId"
+    ]
+   },
+   "Export": {
+    "Name": "RoomHop-Network:ExportsOutputFnGetAttOpenSearchSg98CA9349GroupId88A48A6B"
+   }
+  },
+  "ExportsOutputFnGetAttAlbSg1155C1BEGroupIdF2A72E65": {
+   "Value": {
+    "Fn::GetAtt": [
+     "AlbSg1155C1BE",
+     "GroupId"
+    ]
+   },
+   "Export": {
+    "Name": "RoomHop-Network:ExportsOutputFnGetAttAlbSg1155C1BEGroupIdF2A72E65"
+   }
+  },
+  "ExportsOutputFnGetAttEcsSg17B4B0B3GroupIdF7EB5B8E": {
+   "Value": {
+    "Fn::GetAtt": [
+     "EcsSg17B4B0B3",
+     "GroupId"
+    ]
+   },
+   "Export": {
+    "Name": "RoomHop-Network:ExportsOutputFnGetAttEcsSg17B4B0B3GroupIdF7EB5B8E"
+   }
+  },
+  "ExportsOutputRefRoomHopVpc32D1FA7FAEF44D68": {
+   "Value": {
+    "Ref": "RoomHopVpc32D1FA7F"
+   },
+   "Export": {
+    "Name": "RoomHop-Network:ExportsOutputRefRoomHopVpc32D1FA7FAEF44D68"
+   }
+  },
+  "ExportsOutputFnGetAttLambdaSg30A6108CGroupId30BB2F0D": {
+   "Value": {
+    "Fn::GetAtt": [
+     "LambdaSg30A6108C",
+     "GroupId"
+    ]
+   },
+   "Export": {
+    "Name": "RoomHop-Network:ExportsOutputFnGetAttLambdaSg30A6108CGroupId30BB2F0D"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

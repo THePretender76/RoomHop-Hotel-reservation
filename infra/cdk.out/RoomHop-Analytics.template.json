@@ -1,0 +1,432 @@
+{
+ "Resources": {
+  "AthenaResultsBucket879938FA": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": {
+     "Fn::Join": [
+      "",
+      [
+       "roomhop-athena-results-",
+       {
+        "Ref": "AWS::AccountId"
+       }
+      ]
+     ]
+    },
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "ExpirationInDays": 30,
+       "Status": "Enabled"
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "aws-cdk:auto-delete-objects",
+      "Value": "true"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Analytics/AthenaResultsBucket/Resource"
+   }
+  },
+  "AthenaResultsBucketPolicyD63DEF63": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "AthenaResultsBucket879938FA"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:PutBucketPolicy",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": {
+         "Fn::GetAtt": [
+          "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+          "Arn"
+         ]
+        }
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "AthenaResultsBucket879938FA",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "AthenaResultsBucket879938FA",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Analytics/AthenaResultsBucket/Policy/Resource"
+   }
+  },
+  "AthenaResultsBucketAutoDeleteObjectsCustomResourceD2206C34": {
+   "Type": "Custom::S3AutoDeleteObjects",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
+      "Arn"
+     ]
+    },
+    "BucketName": {
+     "Ref": "AthenaResultsBucket879938FA"
+    }
+   },
+   "DependsOn": [
+    "AthenaResultsBucketPolicyD63DEF63"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Analytics/AthenaResultsBucket/AutoDeleteObjectsCustomResource/Default"
+   }
+  },
+  "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ]
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Analytics/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role"
+   }
+  },
+  "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-370314719865-eu-west-1",
+     "S3Key": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip"
+    },
+    "Timeout": 900,
+    "MemorySize": 128,
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs24.x",
+    "Description": {
+     "Fn::Join": [
+      "",
+      [
+       "Lambda function for auto-deleting objects in ",
+       {
+        "Ref": "AthenaResultsBucket879938FA"
+       },
+       " S3 bucket."
+      ]
+     ]
+    }
+   },
+   "DependsOn": [
+    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Analytics/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler",
+    "aws:asset:path": "asset.faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6",
+    "aws:asset:property": "Code"
+   }
+  },
+  "RoomHopWorkgroup": {
+   "Type": "AWS::Athena::WorkGroup",
+   "Properties": {
+    "Description": "RoomHop analytics workgroup for reservation data queries",
+    "Name": "roomhop-analytics",
+    "State": "ENABLED",
+    "WorkGroupConfiguration": {
+     "BytesScannedCutoffPerQuery": 1073741824,
+     "EnforceWorkGroupConfiguration": true,
+     "EngineVersion": {
+      "SelectedEngineVersion": "Athena engine version 3"
+     },
+     "PublishCloudWatchMetricsEnabled": true,
+     "ResultConfiguration": {
+      "EncryptionConfiguration": {
+       "EncryptionOption": "SSE_S3"
+      },
+      "OutputLocation": {
+       "Fn::Join": [
+        "",
+        [
+         "s3://",
+         {
+          "Ref": "AthenaResultsBucket879938FA"
+         },
+         "/query-results/"
+        ]
+       ]
+      }
+     }
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Analytics/RoomHopWorkgroup"
+   }
+  },
+  "RoomHopGlueDb": {
+   "Type": "AWS::Glue::Database",
+   "Properties": {
+    "CatalogId": {
+     "Ref": "AWS::AccountId"
+    },
+    "DatabaseInput": {
+     "Description": "RoomHop analytics database for reservation event data",
+     "Name": "roomhop_analytics"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Analytics/RoomHopGlueDb"
+   }
+  },
+  "ReservationsTable": {
+   "Type": "AWS::Glue::Table",
+   "Properties": {
+    "CatalogId": {
+     "Ref": "AWS::AccountId"
+    },
+    "DatabaseName": {
+     "Ref": "RoomHopGlueDb"
+    },
+    "TableInput": {
+     "Description": "Reservation events from EventBridge",
+     "Name": "reservations",
+     "Parameters": {
+      "classification": "json",
+      "projection.enabled": "true",
+      "projection.year.type": "integer",
+      "projection.year.range": "2024,2030",
+      "projection.month.type": "integer",
+      "projection.month.range": "1,12",
+      "projection.month.digits": "2",
+      "projection.day.type": "integer",
+      "projection.day.range": "1,31",
+      "projection.day.digits": "2",
+      "storage.location.template": {
+       "Fn::Join": [
+        "",
+        [
+         "s3://",
+         {
+          "Fn::ImportValue": "RoomHop-Events:ExportsOutputRefAnalyticsBucket39EAAEEA4B56ABBC"
+         },
+         "/reservations/year=${year}/month=${month}/day=${day}/"
+        ]
+       ]
+      }
+     },
+     "PartitionKeys": [
+      {
+       "Name": "year",
+       "Type": "string"
+      },
+      {
+       "Name": "month",
+       "Type": "string"
+      },
+      {
+       "Name": "day",
+       "Type": "string"
+      }
+     ],
+     "StorageDescriptor": {
+      "Columns": [
+       {
+        "Name": "eventType",
+        "Type": "string"
+       },
+       {
+        "Name": "reservationId",
+        "Type": "string"
+       },
+       {
+        "Name": "guestEmail",
+        "Type": "string"
+       },
+       {
+        "Name": "guestName",
+        "Type": "string"
+       },
+       {
+        "Name": "hotelId",
+        "Type": "string"
+       },
+       {
+        "Name": "roomType",
+        "Type": "string"
+       },
+       {
+        "Name": "checkIn",
+        "Type": "string"
+       },
+       {
+        "Name": "checkOut",
+        "Type": "string"
+       },
+       {
+        "Name": "totalAmount",
+        "Type": "double"
+       },
+       {
+        "Name": "currency",
+        "Type": "string"
+       },
+       {
+        "Name": "timestamp",
+        "Type": "string"
+       }
+      ],
+      "InputFormat": "org.apache.hadoop.mapred.TextInputFormat",
+      "Location": {
+       "Fn::Join": [
+        "",
+        [
+         "s3://",
+         {
+          "Fn::ImportValue": "RoomHop-Events:ExportsOutputRefAnalyticsBucket39EAAEEA4B56ABBC"
+         },
+         "/reservations/"
+        ]
+       ]
+      },
+      "OutputFormat": "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
+      "SerdeInfo": {
+       "Parameters": {
+        "serialization.format": "1"
+       },
+       "SerializationLibrary": "org.openx.data.jsonserde.JsonSerDe"
+      }
+     },
+     "TableType": "EXTERNAL_TABLE"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Analytics/ReservationsTable"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/5WNPU/DQAyGf0szX0ybVgxsbSoxtmqQGBBCztUJl4+76uxrQVH+O0puKIxMfq3H7+MMssclLBd441Sf27QzJQyFoG4V3vhj4DUMu6BbEpVXNqa3IenNl7HJU/K7Nt3zGmbEEE+3QdyeOhI6lA1p4WR8VxEdXWf0990a93+4Y6EQFOrJzupRoXySRcgr++p8++xduKi6CwRDXtk9CpbIND19wbKjcVR5YHH9idgFr2dyz3/Q0burOZPfTYItM0khWBtbT51DkEuQUVl3Jmj44ZptYLWB1aJhY1IfrJie4BTnD0n+dKR0AQAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Analytics/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "AthenaWorkgroupName": {
+   "Description": "Athena workgroup for BI queries",
+   "Value": "roomhop-analytics"
+  },
+  "GlueDatabaseName": {
+   "Description": "Glue database name",
+   "Value": {
+    "Ref": "RoomHopGlueDb"
+   }
+  },
+  "AthenaResultsBucketName": {
+   "Description": "S3 bucket for Athena query results",
+   "Value": {
+    "Ref": "AthenaResultsBucket879938FA"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}
