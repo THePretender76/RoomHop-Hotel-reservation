@@ -13,13 +13,13 @@ export const CONFIG = {
     port: 3306,
   },
   ecs: {
-    searchService: { cpu: 512, memory: 1024, desiredCount: 2 },
-    reservationService: { cpu: 512, memory: 1024, desiredCount: 2 },
+    searchService: { cpu: 512, memory: 1024, desiredCount: 1 },
+    reservationService: { cpu: 512, memory: 1024, desiredCount: 1 },
   },
   opensearch: {
     domainName: 'roomhop-search',
     instanceType: 't3.small.search',
-    instanceCount: 2,
+    instanceCount: 1,
   },
   s3: {
     websiteBucket: 'roomhop-website',

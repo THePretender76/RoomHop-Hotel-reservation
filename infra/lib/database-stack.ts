@@ -34,7 +34,7 @@ export class DatabaseStack extends cdk.Stack {
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [securityGroups.rdsSg],
-      multiAz: true,
+      multiAz: false,
       allocatedStorage: 50,
       maxAllocatedStorage: 200,
       storageEncrypted: true,

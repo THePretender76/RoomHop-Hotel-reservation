@@ -34,10 +34,9 @@ export class SearchStack extends cdk.Stack {
         dataNodes: CONFIG.opensearch.instanceCount,
         multiAzWithStandbyEnabled: false,
       },
-      // Zone awareness for Multi-AZ distribution
+      // Zone awareness disabled for cost savings (single node)
       zoneAwareness: {
-        availabilityZoneCount: 2,
-        enabled: true,
+        enabled: false,
       },
       // EBS storage per data node
       ebs: {
