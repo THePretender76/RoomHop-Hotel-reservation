@@ -1,0 +1,9 @@
+{
+  "name": "notification-handler",
+  "version": "1.0.0",
+  "description": "RoomHop notification Lambda — SQS to SES email handler",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.600.0"
+  }
+}
