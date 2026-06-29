@@ -40,12 +40,6 @@ export class ComputeStack extends cdk.Stack {
       imageScanOnPush: true,
     });
 
-    const adminRepo = new ecr.Repository(this, 'AdminServiceRepo', {
-      repositoryName: `${CONFIG.projectName}/admin-service`,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-      imageScanOnPush: true,
-    });
-
     // ─── ECS Cluster ────────────────────────────────────────────────────────────
     const cluster = new ecs.Cluster(this, 'RoomHopCluster', {
       vpc,
@@ -180,7 +174,6 @@ export class ComputeStack extends cdk.Stack {
     // ─── Create Services ────────────────────────────────────────────────────────
     createService('search', searchRepo, CONFIG.ecs.searchService, '/v1/search*');
     createService('reservation', reservationRepo, CONFIG.ecs.reservationService, '/v1/reservations*');
-    createService('admin', adminRepo, CONFIG.ecs.adminService, '/v1/admin*');
 
     // ─── Outputs ────────────────────────────────────────────────────────────────
     new cdk.CfnOutput(this, 'AlbDnsName', {

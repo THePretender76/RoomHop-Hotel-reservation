@@ -15,7 +15,6 @@ export const CONFIG = {
   ecs: {
     searchService: { cpu: 512, memory: 1024, desiredCount: 2 },
     reservationService: { cpu: 512, memory: 1024, desiredCount: 2 },
-    adminService: { cpu: 256, memory: 512, desiredCount: 1 },
   },
   opensearch: {
     domainName: 'roomhop-search',

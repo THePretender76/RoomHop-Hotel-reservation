@@ -99,14 +99,6 @@ export class ApiStack extends cdk.Stack {
       authorizer: jwtAuthorizer,
     });
 
-    // Admin routes (authenticated — further role checks done in service)
-    httpApi.addRoutes({
-      path: '/v1/admin/{proxy+}',
-      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST, apigatewayv2.HttpMethod.PUT, apigatewayv2.HttpMethod.DELETE],
-      integration: albIntegration,
-      authorizer: jwtAuthorizer,
-    });
-
     this.apiEndpoint = httpApi.apiEndpoint;
 
     // ─── Outputs ────────────────────────────────────────────────────────────────
