@@ -118,55 +118,20 @@ export class EventsStack extends cdk.Stack {
 
     // ─── Lambda: Notification Handler ───────────────────────────────────────────
     // Sends booking confirmation/cancellation emails via SES.
+    // Code is in services/lambda/notification-handler/
     const notificationLambda = new lambda.Function(this, 'NotificationHandler', {
       functionName: `${CONFIG.projectName}-notification-handler`,
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
-      code: lambda.Code.fromInline(`
-const { SESv2Client, SendEmailCommand } = require('@aws-sdk/client-sesv2');
-
-const sesClient = new SESv2Client({});
-
-exports.handler = async (event) => {
-  for (const record of event.Records) {
-    const body = JSON.parse(record.body);
-    const detail = body.detail || body;
-    const detailType = body['detail-type'] || 'BookingConfirmed';
-    
-    const subject = detailType === 'BookingConfirmed'
-      ? 'Booking Confirmation - RoomHop'
-      : 'Booking Cancellation - RoomHop';
-    
-    const emailBody = detailType === 'BookingConfirmed'
-      ? \`Dear \${detail.guestName},\\n\\nYour booking (ID: \${detail.reservationId}) has been confirmed.\\nCheck-in: \${detail.checkIn}\\nCheck-out: \${detail.checkOut}\\n\\nThank you for choosing RoomHop!\`
-      : \`Dear \${detail.guestName},\\n\\nYour booking (ID: \${detail.reservationId}) has been cancelled.\\n\\nWe hope to see you again soon.\`;
-
-    try {
-      await sesClient.send(new SendEmailCommand({
-        FromEmailAddress: 'noreply@roomhop.com',
-        Destination: { ToAddresses: [detail.guestEmail] },
-        Content: {
-          Simple: {
-            Subject: { Data: subject },
-            Body: { Text: { Data: emailBody } },
-          },
-        },
-      }));
-      console.log(\`Email sent to \${detail.guestEmail} for \${detailType}\`);
-    } catch (error) {
-      console.error('Failed to send email:', error);
-      throw error;
-    }
-  }
-};
-`),
+      code: lambda.Code.fromAsset('../services/lambda/notification-handler'),
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [securityGroups.lambdaSg],
       environment: {
-        REGION: CONFIG.region,
+        AWS_REGION_OVERRIDE: CONFIG.region,
+        SENDER_EMAIL: 'noreply@roomhop.com',
       },
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
@@ -190,56 +155,12 @@ exports.handler = async (event) => {
 
     // ─── Lambda: Analytics Handler ──────────────────────────────────────────────
     // Writes booking event data to S3 as JSON for Athena queries.
+    // Code is in services/lambda/analytics-handler/
     const analyticsLambda = new lambda.Function(this, 'AnalyticsHandler', {
       functionName: `${CONFIG.projectName}-analytics-handler`,
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
-      code: lambda.Code.fromInline(`
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-
-const s3Client = new S3Client({});
-const BUCKET = process.env.ANALYTICS_BUCKET;
-
-exports.handler = async (event) => {
-  for (const record of event.Records) {
-    const body = JSON.parse(record.body);
-    const detail = body.detail || body;
-    const detailType = body['detail-type'] || 'Unknown';
-    const timestamp = new Date().toISOString();
-    const date = timestamp.split('T')[0];
-    
-    // Partition by date and event type for efficient Athena queries
-    const key = \`reservations/year=\${date.split('-')[0]}/month=\${date.split('-')[1]}/day=\${date.split('-')[2]}/\${detailType}_\${detail.reservationId || Date.now()}.json\`;
-    
-    const record_data = {
-      eventType: detailType,
-      reservationId: detail.reservationId,
-      guestEmail: detail.guestEmail,
-      guestName: detail.guestName,
-      hotelId: detail.hotelId,
-      roomType: detail.roomType,
-      checkIn: detail.checkIn,
-      checkOut: detail.checkOut,
-      totalAmount: detail.totalAmount,
-      currency: detail.currency || 'EUR',
-      timestamp,
-    };
-
-    try {
-      await s3Client.send(new PutObjectCommand({
-        Bucket: BUCKET,
-        Key: key,
-        Body: JSON.stringify(record_data),
-        ContentType: 'application/json',
-      }));
-      console.log(\`Analytics record written: \${key}\`);
-    } catch (error) {
-      console.error('Failed to write analytics record:', error);
-      throw error;
-    }
-  }
-};
-`),
+      code: lambda.Code.fromAsset('../services/lambda/analytics-handler'),
       timeout: cdk.Duration.seconds(60),
       memorySize: 256,
       vpc,
@@ -247,7 +168,7 @@ exports.handler = async (event) => {
       securityGroups: [securityGroups.lambdaSg],
       environment: {
         ANALYTICS_BUCKET: this.analyticsBucket.bucketName,
-        REGION: CONFIG.region,
+        AWS_REGION_OVERRIDE: CONFIG.region,
       },
       logRetention: logs.RetentionDays.ONE_MONTH,
     });

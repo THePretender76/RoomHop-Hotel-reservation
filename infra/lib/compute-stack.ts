@@ -87,8 +87,7 @@ export class ComputeStack extends cdk.Stack {
 
     // ─── Common environment variables ───────────────────────────────────────────
     const commonEnv: { [key: string]: string } = {
-      DB_HOST: dbEndpoint,
-      DB_PORT: CONFIG.rds.port.toString(),
+      DB_SECRET_ARN: dbSecret.secretArn,
       DB_NAME: CONFIG.rds.databaseName,
       OPENSEARCH_ENDPOINT: `https://${opensearchEndpoint}`,
       AWS_REGION: CONFIG.region,
@@ -122,9 +121,6 @@ export class ComputeStack extends cdk.Stack {
           logGroup,
         }),
         environment: commonEnv,
-        secrets: {
-          DB_SECRET: ecs.Secret.fromSecretsManager(dbSecret),
-        },
         portMappings: [{ containerPort: 3000 }],
         healthCheck: {
           command: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1'],

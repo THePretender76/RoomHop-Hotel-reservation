@@ -2,7 +2,7 @@
 export const CONFIG = {
   projectName: 'roomhop',
   environment: 'prod',
-  region: 'eu-west-1',
+  region: 'us-east-1',
   vpc: {
     cidr: '10.0.0.0/16',
     maxAzs: 2,
