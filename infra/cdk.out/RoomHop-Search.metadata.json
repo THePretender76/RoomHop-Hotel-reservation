@@ -32,7 +32,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new SearchStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\search-stack.ts:70:5)",
+        "new SearchStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\search-stack.ts:69:5)",
         "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:33:21)",
         "...node internals, ts-node, ts-node..."
       ]

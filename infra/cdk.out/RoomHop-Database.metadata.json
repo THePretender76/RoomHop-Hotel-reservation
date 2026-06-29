@@ -3,7 +3,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:25:23)",
         "...node internals, ts-node, ts-node, ts-node..."
       ]
     },
@@ -19,7 +19,7 @@
         "synthesize (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\private\\synthesis.js:1:3580)",
         "App.synth (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\stage.js:1:4636)",
         "App.synth (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\app.js:1:4814)",
-        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:73:5)",
         "Module._compile (node:internal/modules/cjs/loader:1812:14)",
         "Module.m._compile (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\index.ts:1618:23)",
         "node:internal/modules/cjs/loader:1943:10",
@@ -51,7 +51,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:67:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:25:23)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -65,7 +65,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:72:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:25:23)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -106,7 +106,7 @@
       "data": [
         "...new DatabaseInstance2 in aws-cdk-lib...",
         "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:26:24)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:25:23)",
         "...node internals..."
       ]
     }
@@ -121,7 +121,7 @@
       "data": [
         "...new DatabaseInstance2 in aws-cdk-lib...",
         "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:26:24)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:25:23)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -135,7 +135,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...App.synth in aws-cdk-lib...",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:73:5)",
         "...node internals..."
       ]
     }
@@ -149,21 +149,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...App.synth in aws-cdk-lib...",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
-        "...node internals..."
-      ]
-    }
-  ],
-  "/RoomHop-Database/Exports/Output{\"Fn::GetAtt\":[\"RoomHopDbE208ABCA\",\"Endpoint.Address\"]}": [
-    {
-      "type": "aws:cdk:logicalId",
-      "data": "ExportsOutputFnGetAttRoomHopDbE208ABCAEndpointAddressA34827BE"
-    },
-    {
-      "type": "aws:cdk:creationStack",
-      "data": [
-        "...App.synth in aws-cdk-lib...",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:73:5)",
         "...node internals..."
       ]
     }
@@ -178,7 +164,7 @@
       "data": [
         "...new DatabaseInstance2 in aws-cdk-lib...",
         "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:26:24)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:25:23)",
         "...node internals, ts-node..."
       ]
     }
@@ -193,7 +179,7 @@
       "data": [
         "...new DatabaseInstance2 in aws-cdk-lib...",
         "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:26:24)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)"
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:25:23)"
       ]
     }
   ],
@@ -207,7 +193,7 @@
       "data": [
         "...new DatabaseInstance2 in aws-cdk-lib...",
         "new DatabaseStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\database-stack.ts:26:24)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:26:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:25:23)",
         "...node internals, ts-node..."
       ]
     }

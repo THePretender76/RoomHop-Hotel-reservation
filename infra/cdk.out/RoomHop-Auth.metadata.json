@@ -3,7 +3,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:50:19)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:42:19)",
         "...node internals, ts-node, ts-node, ts-node..."
       ]
     }
@@ -17,7 +17,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new AuthStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\auth-stack.ts:49:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:50:19)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:42:19)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -31,7 +31,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new AuthStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\auth-stack.ts:55:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:50:19)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:42:19)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -45,7 +45,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new AuthStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\auth-stack.ts:90:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:50:19)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:42:19)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -59,7 +59,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new AuthStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\auth-stack.ts:95:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:50:19)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:42:19)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -73,7 +73,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new AuthStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\auth-stack.ts:100:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:50:19)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:42:19)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -114,7 +114,7 @@
       "data": [
         "...new UserPool2 in aws-cdk-lib...",
         "new AuthStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\auth-stack.ts:15:21)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:50:19)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:42:19)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -128,7 +128,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...App.synth in aws-cdk-lib...",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:73:5)",
         "...node internals..."
       ]
     }
@@ -142,7 +142,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...App.synth in aws-cdk-lib...",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:73:5)",
         "...node internals..."
       ]
     }
@@ -156,7 +156,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...App.synth in aws-cdk-lib...",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:73:5)",
         "...node internals..."
       ]
     }
@@ -171,7 +171,7 @@
       "data": [
         "...WrappedClass.addClient in aws-cdk-lib...",
         "new AuthStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\auth-stack.ts:63:41)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:50:19)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:42:19)",
         "...node internals, ts-node, ts-node..."
       ]
     }

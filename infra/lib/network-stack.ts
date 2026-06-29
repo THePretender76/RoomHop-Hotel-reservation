@@ -134,6 +134,7 @@ export class NetworkStack extends cdk.Stack {
       { id: 'EventBridgeEndpoint', service: ec2.InterfaceVpcEndpointAwsService.EVENTBRIDGE },
       { id: 'SqsEndpoint', service: ec2.InterfaceVpcEndpointAwsService.SQS },
       { id: 'SesEndpoint', service: ec2.InterfaceVpcEndpointAwsService.SES },
+      { id: 'SsmMessagesEndpoint', service: ec2.InterfaceVpcEndpointAwsService.SSM_MESSAGES },
     ];
 
     for (const ep of interfaceEndpoints) {

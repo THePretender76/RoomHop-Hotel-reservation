@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../components/Footer';
+import { IMAGES_BASE } from '../config';
 import styles from './HomePage.module.css';
 
-const MINIO_BASE = 'http://localhost:9000/hotels/placeholder_image';
+const MINIO_BASE = `${IMAGES_BASE}/placeholder_image`;
 
 const galleryItems = [
   { id: 'gallery-1', label: 'Modern Suites', src: `${MINIO_BASE}/gallery-1.jpg` },

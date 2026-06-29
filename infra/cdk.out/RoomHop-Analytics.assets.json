@@ -8,26 +8,26 @@
         "packaging": "zip"
       },
       "destinations": {
-        "370314719865-eu-west-1-71ed4558": {
-          "bucketName": "cdk-hnb659fds-assets-370314719865-eu-west-1",
+        "370314719865-us-east-1-a77968b5": {
+          "bucketName": "cdk-hnb659fds-assets-370314719865-us-east-1",
           "objectKey": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip",
-          "region": "eu-west-1",
-          "assumeRoleArn": "arn:${AWS::Partition}:iam::370314719865:role/cdk-hnb659fds-file-publishing-role-370314719865-eu-west-1"
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::370314719865:role/cdk-hnb659fds-file-publishing-role-370314719865-us-east-1"
         }
       }
     },
-    "3024e2dc5ccb5b3b065a4f62e2146381f8ecb5b4669ffcee949c0cafc274a0c3": {
+    "befb864d2ce5e16726aef1d01005a607aff3ff301a7655dddcdc65ab7e89e9d1": {
       "displayName": "RoomHop-Analytics Template",
       "source": {
         "path": "RoomHop-Analytics.template.json",
         "packaging": "file"
       },
       "destinations": {
-        "370314719865-eu-west-1-90dd4719": {
-          "bucketName": "cdk-hnb659fds-assets-370314719865-eu-west-1",
-          "objectKey": "3024e2dc5ccb5b3b065a4f62e2146381f8ecb5b4669ffcee949c0cafc274a0c3.json",
-          "region": "eu-west-1",
-          "assumeRoleArn": "arn:${AWS::Partition}:iam::370314719865:role/cdk-hnb659fds-file-publishing-role-370314719865-eu-west-1"
+        "370314719865-us-east-1-19a38f9d": {
+          "bucketName": "cdk-hnb659fds-assets-370314719865-us-east-1",
+          "objectKey": "befb864d2ce5e16726aef1d01005a607aff3ff301a7655dddcdc65ab7e89e9d1.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::370314719865:role/cdk-hnb659fds-file-publishing-role-370314719865-us-east-1"
         }
       }
     }

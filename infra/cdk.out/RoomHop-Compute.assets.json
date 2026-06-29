@@ -1,18 +1,18 @@
 {
   "version": "54.0.0",
   "files": {
-    "93889e216a1e6f0f35077b47e8102b5f70b4209fb49018298664945c4154322e": {
+    "82da645cde66ae00d5af0b7f2550ae85f72ba4ade479064c2af6b7772ba8af02": {
       "displayName": "RoomHop-Compute Template",
       "source": {
         "path": "RoomHop-Compute.template.json",
         "packaging": "file"
       },
       "destinations": {
-        "370314719865-eu-west-1-94096a35": {
-          "bucketName": "cdk-hnb659fds-assets-370314719865-eu-west-1",
-          "objectKey": "93889e216a1e6f0f35077b47e8102b5f70b4209fb49018298664945c4154322e.json",
-          "region": "eu-west-1",
-          "assumeRoleArn": "arn:${AWS::Partition}:iam::370314719865:role/cdk-hnb659fds-file-publishing-role-370314719865-eu-west-1"
+        "370314719865-us-east-1-052a96c3": {
+          "bucketName": "cdk-hnb659fds-assets-370314719865-us-east-1",
+          "objectKey": "82da645cde66ae00d5af0b7f2550ae85f72ba4ade479064c2af6b7772ba8af02.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::370314719865:role/cdk-hnb659fds-file-publishing-role-370314719865-us-east-1"
         }
       }
     }

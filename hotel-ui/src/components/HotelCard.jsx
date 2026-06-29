@@ -1,9 +1,10 @@
+import { IMAGES_BASE } from '../config';
 import styles from './HotelCard.module.css';
 
 export default function HotelCard({ hotel, onBook }) {
   const name = hotel.name || hotel.nom || 'RoomHop Hotel';
   const location = hotel.location || hotel.ville || hotel.city || '';
-  const image = hotel.primary_image_url || hotel.image_url || hotel.image || 'http://localhost:9000/hotels/placeholder_image/hotel-1.jpg';
+  const image = hotel.primary_image_url || hotel.image_url || hotel.image || `${IMAGES_BASE}/placeholder_image/hotel-1.jpg`;
   const price = hotel.nightly_rate || hotel.prix || hotel.price || hotel.tarif || hotel.cost || 0;
   const rating = hotel.note || hotel.rating || hotel.score || 4.8;
   const stars = Number(hotel.etoiles || hotel.stars || 5);

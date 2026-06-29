@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { IMAGES_BASE } from '../config';
 import SkeletonCard from '../components/SkeletonCard';
 import { useSearch } from '../hooks/useSearch';
 import styles from './SearchResultsPage.module.css';
@@ -255,7 +256,7 @@ export default function SearchResultsPage() {
                   <article key={hotel.hotel_id} className={styles.hotelGroupCard}>
                     <div className={styles.hotelGroupTop}>
                       <img
-                        src={hotel.primary_image_url || 'http://localhost:9000/hotels/placeholder_image/hotel-1.jpg'}
+                        src={hotel.primary_image_url || `${IMAGES_BASE}/placeholder_image/hotel-1.jpg`}
                         alt={hotel.name}
                         className={styles.hotelGroupImage}
                         loading="lazy"
@@ -275,7 +276,7 @@ export default function SearchResultsPage() {
                       {hotel.roomTypes.map((rt) => (
                         <div key={rt.room_type_id} className={styles.roomTypeRow}>
                           <img
-                            src={rt.image_url || hotel.primary_image_url || 'http://localhost:9000/hotels/placeholder_image/hotel-1.jpg'}
+                            src={rt.image_url || hotel.primary_image_url || `${IMAGES_BASE}/placeholder_image/hotel-1.jpg`}
                             alt={rt.name}
                             className={styles.roomTypeThumb}
                             loading="lazy"

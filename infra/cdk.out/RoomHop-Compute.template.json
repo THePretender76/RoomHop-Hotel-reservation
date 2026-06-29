@@ -28,20 +28,6 @@
     "aws:cdk:path": "RoomHop-Compute/ReservationServiceRepo/Resource"
    }
   },
-  "AdminServiceRepo3C15DE77": {
-   "Type": "AWS::ECR::Repository",
-   "Properties": {
-    "ImageScanningConfiguration": {
-     "ScanOnPush": true
-    },
-    "RepositoryName": "roomhop/admin-service"
-   },
-   "UpdateReplacePolicy": "Retain",
-   "DeletionPolicy": "Retain",
-   "Metadata": {
-    "aws:cdk:path": "RoomHop-Compute/AdminServiceRepo/Resource"
-   }
-  },
   "RoomHopCluster833720E2": {
    "Type": "AWS::ECS::Cluster",
    "Properties": {
@@ -217,33 +203,6 @@
          "Arn"
         ]
        }
-      },
-      {
-       "Action": [
-        "ecr:BatchCheckLayerAvailability",
-        "ecr:GetDownloadUrlForLayer",
-        "ecr:BatchGetImage"
-       ],
-       "Effect": "Allow",
-       "Resource": {
-        "Fn::GetAtt": [
-         "AdminServiceRepo3C15DE77",
-         "Arn"
-        ]
-       }
-      },
-      {
-       "Action": [
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-       ],
-       "Effect": "Allow",
-       "Resource": {
-        "Fn::GetAtt": [
-         "adminLogs4B1EE993",
-         "Arn"
-        ]
-       }
       }
      ],
      "Version": "2012-10-17"
@@ -327,14 +286,10 @@
      {
       "Environment": [
        {
-        "Name": "DB_HOST",
+        "Name": "DB_SECRET_ARN",
         "Value": {
-         "Fn::ImportValue": "RoomHop-Database:ExportsOutputFnGetAttRoomHopDbE208ABCAEndpointAddressA34827BE"
+         "Fn::ImportValue": "RoomHop-Database:ExportsOutputRefRoomHopDbSecretAttachment273AC49D03471222"
         }
-       },
-       {
-        "Name": "DB_PORT",
-        "Value": "3306"
        },
        {
         "Name": "DB_NAME",
@@ -342,21 +297,11 @@
        },
        {
         "Name": "OPENSEARCH_ENDPOINT",
-        "Value": {
-         "Fn::Join": [
-          "",
-          [
-           "https://",
-           {
-            "Fn::ImportValue": "RoomHop-Search:ExportsOutputFnGetAttRoomHopSearch3386E240DomainEndpointC80A3F09"
-           }
-          ]
-         ]
-        }
+        "Value": "https://not-used"
        },
        {
         "Name": "AWS_REGION",
-        "Value": "eu-west-1"
+        "Value": "us-east-1"
        },
        {
         "Name": "NODE_ENV",
@@ -430,7 +375,7 @@
          "Ref": "searchLogsD6CB2FDA"
         },
         "awslogs-stream-prefix": "search",
-        "awslogs-region": "eu-west-1"
+        "awslogs-region": "us-east-1"
        }
       },
       "Name": "searchContainer",
@@ -438,14 +383,6 @@
        {
         "ContainerPort": 3000,
         "Protocol": "tcp"
-       }
-      ],
-      "Secrets": [
-       {
-        "Name": "DB_SECRET",
-        "ValueFrom": {
-         "Fn::ImportValue": "RoomHop-Database:ExportsOutputRefRoomHopDbSecretAttachment273AC49D03471222"
-        }
        }
       ]
      }
@@ -489,7 +426,7 @@
      "MaximumPercent": 200,
      "MinimumHealthyPercent": 50
     },
-    "DesiredCount": 2,
+    "DesiredCount": 1,
     "EnableECSManagedTags": false,
     "HealthCheckGracePeriodSeconds": 60,
     "LaunchType": "FARGATE",
@@ -608,14 +545,10 @@
      {
       "Environment": [
        {
-        "Name": "DB_HOST",
+        "Name": "DB_SECRET_ARN",
         "Value": {
-         "Fn::ImportValue": "RoomHop-Database:ExportsOutputFnGetAttRoomHopDbE208ABCAEndpointAddressA34827BE"
+         "Fn::ImportValue": "RoomHop-Database:ExportsOutputRefRoomHopDbSecretAttachment273AC49D03471222"
         }
-       },
-       {
-        "Name": "DB_PORT",
-        "Value": "3306"
        },
        {
         "Name": "DB_NAME",
@@ -623,21 +556,11 @@
        },
        {
         "Name": "OPENSEARCH_ENDPOINT",
-        "Value": {
-         "Fn::Join": [
-          "",
-          [
-           "https://",
-           {
-            "Fn::ImportValue": "RoomHop-Search:ExportsOutputFnGetAttRoomHopSearch3386E240DomainEndpointC80A3F09"
-           }
-          ]
-         ]
-        }
+        "Value": "https://not-used"
        },
        {
         "Name": "AWS_REGION",
-        "Value": "eu-west-1"
+        "Value": "us-east-1"
        },
        {
         "Name": "NODE_ENV",
@@ -711,7 +634,7 @@
          "Ref": "reservationLogsBEC4A5AB"
         },
         "awslogs-stream-prefix": "reservation",
-        "awslogs-region": "eu-west-1"
+        "awslogs-region": "us-east-1"
        }
       },
       "Name": "reservationContainer",
@@ -719,14 +642,6 @@
        {
         "ContainerPort": 3000,
         "Protocol": "tcp"
-       }
-      ],
-      "Secrets": [
-       {
-        "Name": "DB_SECRET",
-        "ValueFrom": {
-         "Fn::ImportValue": "RoomHop-Database:ExportsOutputRefRoomHopDbSecretAttachment273AC49D03471222"
-        }
        }
       ]
      }
@@ -770,7 +685,7 @@
      "MaximumPercent": 200,
      "MinimumHealthyPercent": 50
     },
-    "DesiredCount": 2,
+    "DesiredCount": 1,
     "EnableECSManagedTags": false,
     "HealthCheckGracePeriodSeconds": 60,
     "LaunchType": "FARGATE",
@@ -868,287 +783,6 @@
    },
    "Metadata": {
     "aws:cdk:path": "RoomHop-Compute/reservationRule/Resource"
-   }
-  },
-  "adminLogs4B1EE993": {
-   "Type": "AWS::Logs::LogGroup",
-   "Properties": {
-    "LogGroupName": "/ecs/roomhop/admin",
-    "RetentionInDays": 30
-   },
-   "UpdateReplacePolicy": "Delete",
-   "DeletionPolicy": "Delete",
-   "Metadata": {
-    "aws:cdk:path": "RoomHop-Compute/adminLogs/Resource"
-   }
-  },
-  "adminTaskDef0AAAB031": {
-   "Type": "AWS::ECS::TaskDefinition",
-   "Properties": {
-    "ContainerDefinitions": [
-     {
-      "Environment": [
-       {
-        "Name": "DB_HOST",
-        "Value": {
-         "Fn::ImportValue": "RoomHop-Database:ExportsOutputFnGetAttRoomHopDbE208ABCAEndpointAddressA34827BE"
-        }
-       },
-       {
-        "Name": "DB_PORT",
-        "Value": "3306"
-       },
-       {
-        "Name": "DB_NAME",
-        "Value": "hotel_db"
-       },
-       {
-        "Name": "OPENSEARCH_ENDPOINT",
-        "Value": {
-         "Fn::Join": [
-          "",
-          [
-           "https://",
-           {
-            "Fn::ImportValue": "RoomHop-Search:ExportsOutputFnGetAttRoomHopSearch3386E240DomainEndpointC80A3F09"
-           }
-          ]
-         ]
-        }
-       },
-       {
-        "Name": "AWS_REGION",
-        "Value": "eu-west-1"
-       },
-       {
-        "Name": "NODE_ENV",
-        "Value": "production"
-       }
-      ],
-      "Essential": true,
-      "HealthCheck": {
-       "Command": [
-        "CMD-SHELL",
-        "curl -f http://localhost:3000/health || exit 1"
-       ],
-       "Interval": 30,
-       "Retries": 3,
-       "StartPeriod": 60,
-       "Timeout": 5
-      },
-      "Image": {
-       "Fn::Join": [
-        "",
-        [
-         {
-          "Fn::Select": [
-           4,
-           {
-            "Fn::Split": [
-             ":",
-             {
-              "Fn::GetAtt": [
-               "AdminServiceRepo3C15DE77",
-               "Arn"
-              ]
-             }
-            ]
-           }
-          ]
-         },
-         ".dkr.ecr.",
-         {
-          "Fn::Select": [
-           3,
-           {
-            "Fn::Split": [
-             ":",
-             {
-              "Fn::GetAtt": [
-               "AdminServiceRepo3C15DE77",
-               "Arn"
-              ]
-             }
-            ]
-           }
-          ]
-         },
-         ".",
-         {
-          "Ref": "AWS::URLSuffix"
-         },
-         "/",
-         {
-          "Ref": "AdminServiceRepo3C15DE77"
-         },
-         ":latest"
-        ]
-       ]
-      },
-      "LogConfiguration": {
-       "LogDriver": "awslogs",
-       "Options": {
-        "awslogs-group": {
-         "Ref": "adminLogs4B1EE993"
-        },
-        "awslogs-stream-prefix": "admin",
-        "awslogs-region": "eu-west-1"
-       }
-      },
-      "Name": "adminContainer",
-      "PortMappings": [
-       {
-        "ContainerPort": 3000,
-        "Protocol": "tcp"
-       }
-      ],
-      "Secrets": [
-       {
-        "Name": "DB_SECRET",
-        "ValueFrom": {
-         "Fn::ImportValue": "RoomHop-Database:ExportsOutputRefRoomHopDbSecretAttachment273AC49D03471222"
-        }
-       }
-      ]
-     }
-    ],
-    "Cpu": "256",
-    "ExecutionRoleArn": {
-     "Fn::GetAtt": [
-      "TaskExecutionRole250D2532",
-      "Arn"
-     ]
-    },
-    "Family": "RoomHopComputeadminTaskDef1B4D6415",
-    "Memory": "512",
-    "NetworkMode": "awsvpc",
-    "RequiresCompatibilities": [
-     "FARGATE"
-    ],
-    "TaskRoleArn": {
-     "Fn::GetAtt": [
-      "TaskRole30FC0FBB",
-      "Arn"
-     ]
-    }
-   },
-   "Metadata": {
-    "aws:cdk:path": "RoomHop-Compute/adminTaskDef/Resource"
-   }
-  },
-  "adminServiceA8CFDFB4": {
-   "Type": "AWS::ECS::Service",
-   "Properties": {
-    "Cluster": {
-     "Ref": "RoomHopCluster833720E2"
-    },
-    "DeploymentConfiguration": {
-     "Alarms": {
-      "AlarmNames": [],
-      "Enable": false,
-      "Rollback": false
-     },
-     "MaximumPercent": 200,
-     "MinimumHealthyPercent": 50
-    },
-    "DesiredCount": 1,
-    "EnableECSManagedTags": false,
-    "HealthCheckGracePeriodSeconds": 60,
-    "LaunchType": "FARGATE",
-    "LoadBalancers": [
-     {
-      "ContainerName": "adminContainer",
-      "ContainerPort": 3000,
-      "TargetGroupArn": {
-       "Ref": "adminTg2B98997C"
-      }
-     }
-    ],
-    "NetworkConfiguration": {
-     "AwsvpcConfiguration": {
-      "AssignPublicIp": "DISABLED",
-      "SecurityGroups": [
-       {
-        "Fn::ImportValue": "RoomHop-Network:ExportsOutputFnGetAttEcsSg17B4B0B3GroupIdF7EB5B8E"
-       }
-      ],
-      "Subnets": [
-       {
-        "Fn::ImportValue": "RoomHop-Network:ExportsOutputRefRoomHopVpcPrivateSubnet1SubnetF4CFC437D54E75B2"
-       },
-       {
-        "Fn::ImportValue": "RoomHop-Network:ExportsOutputRefRoomHopVpcPrivateSubnet2Subnet2E0B0C6F2C8C1A50"
-       }
-      ]
-     }
-    },
-    "ServiceName": "roomhop-admin",
-    "TaskDefinition": {
-     "Ref": "adminTaskDef0AAAB031"
-    }
-   },
-   "DependsOn": [
-    "adminRuleFF4D4E45",
-    "TaskRoleDefaultPolicy07FC53DE",
-    "TaskRole30FC0FBB"
-   ],
-   "Metadata": {
-    "aws:cdk:path": "RoomHop-Compute/adminService/Service"
-   }
-  },
-  "adminTg2B98997C": {
-   "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
-   "Properties": {
-    "HealthCheckIntervalSeconds": 30,
-    "HealthCheckPath": "/health",
-    "HealthyThresholdCount": 2,
-    "Name": "roomhop-admin",
-    "Port": 3000,
-    "Protocol": "HTTP",
-    "TargetGroupAttributes": [
-     {
-      "Key": "stickiness.enabled",
-      "Value": "false"
-     }
-    ],
-    "TargetType": "ip",
-    "UnhealthyThresholdCount": 3,
-    "VpcId": {
-     "Fn::ImportValue": "RoomHop-Network:ExportsOutputRefRoomHopVpc32D1FA7FAEF44D68"
-    }
-   },
-   "Metadata": {
-    "aws:cdk:path": "RoomHop-Compute/adminTg/Resource"
-   }
-  },
-  "adminRuleFF4D4E45": {
-   "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
-   "Properties": {
-    "Actions": [
-     {
-      "TargetGroupArn": {
-       "Ref": "adminTg2B98997C"
-      },
-      "Type": "forward"
-     }
-    ],
-    "Conditions": [
-     {
-      "Field": "path-pattern",
-      "PathPatternConfig": {
-       "Values": [
-        "/v1/admin*"
-       ]
-      }
-     }
-    ],
-    "ListenerArn": {
-     "Ref": "InternalAlbHttpListener0AAACE8D"
-    },
-    "Priority": 30
-   },
-   "Metadata": {
-    "aws:cdk:path": "RoomHop-Compute/adminRule/Resource"
    }
   },
   "CDKMetadata": {

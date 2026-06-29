@@ -3,7 +3,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node, ts-node..."
       ]
     }
@@ -19,9 +19,9 @@
         "new BaseService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\no-box-stack-traces.js:1:345)",
         "new FargateService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ecs\\lib\\fargate\\fargate-service.js:1:7829)",
         "new FargateService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\prop-injectable.js:1:855)",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:144:23)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:181:5)",
-        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:134:23)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:171:5)",
+        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "Module._compile (node:internal/modules/cjs/loader:1812:14)",
         "Module.m._compile (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\index.ts:1618:23)",
         "node:internal/modules/cjs/loader:1943:10",
@@ -53,9 +53,9 @@
         "new BaseService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\no-box-stack-traces.js:1:345)",
         "new FargateService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ecs\\lib\\fargate\\fargate-service.js:1:7829)",
         "new FargateService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\prop-injectable.js:1:855)",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:144:23)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:181:5)",
-        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:134:23)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:171:5)",
+        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "Module._compile (node:internal/modules/cjs/loader:1812:14)",
         "Module.m._compile (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\index.ts:1618:23)",
         "node:internal/modules/cjs/loader:1943:10",
@@ -89,9 +89,9 @@
         "new BaseService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\no-box-stack-traces.js:1:345)",
         "new FargateService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ecs\\lib\\fargate\\fargate-service.js:1:7829)",
         "new FargateService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\prop-injectable.js:1:855)",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:144:23)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:182:5)",
-        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:134:23)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:172:5)",
+        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "Module._compile (node:internal/modules/cjs/loader:1812:14)",
         "Module.m._compile (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\index.ts:1618:23)",
         "node:internal/modules/cjs/loader:1943:10",
@@ -123,79 +123,9 @@
         "new BaseService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\no-box-stack-traces.js:1:345)",
         "new FargateService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ecs\\lib\\fargate\\fargate-service.js:1:7829)",
         "new FargateService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\prop-injectable.js:1:855)",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:144:23)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:182:5)",
-        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
-        "Module._compile (node:internal/modules/cjs/loader:1812:14)",
-        "Module.m._compile (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\index.ts:1618:23)",
-        "node:internal/modules/cjs/loader:1943:10",
-        "Object.require.extensions.<computed> [as .ts] (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\index.ts:1621:12)",
-        "Module.load (node:internal/modules/cjs/loader:1533:32)",
-        "Module._load (node:internal/modules/cjs/loader:1335:12)",
-        "wrapModuleLoad (node:internal/modules/cjs/loader:255:19)",
-        "Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)",
-        "phase4 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\bin.ts:649:14)",
-        "bootstrap (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\bin.ts:95:10)",
-        "main (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\bin.ts:55:10)",
-        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\bin.ts:800:3)",
-        "Module._compile (node:internal/modules/cjs/loader:1812:14)",
-        "Object.<anonymous> (node:internal/modules/cjs/loader:1943:10)",
-        "Module.load (node:internal/modules/cjs/loader:1533:32)",
-        "Module._load (node:internal/modules/cjs/loader:1335:12)",
-        "wrapModuleLoad (node:internal/modules/cjs/loader:255:19)",
-        "Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)",
-        "node:internal/main/run_main_module:33:47"
-      ]
-    }
-  ],
-  "/RoomHop-Compute/adminService": [
-    {
-      "type": "aws:cdk:warning",
-      "data": "Enable the 'circuitBreaker' property to trigger a quicker deployment failure if tasks are failing to come start (without this setting deployments may take up to 3 hours to fail). [ack: @aws-cdk/aws-ecs:shouldUseCircuitBreaker]",
-      "trace": [
-        "Annotations.addMessage (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\annotations.js:1:3441)",
-        "Annotations.addWarningV2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\annotations.js:1:2129)",
-        "new BaseService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ecs\\lib\\base\\base-service.js:1:14671)",
-        "new BaseService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\no-box-stack-traces.js:1:345)",
-        "new FargateService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ecs\\lib\\fargate\\fargate-service.js:1:7829)",
-        "new FargateService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\prop-injectable.js:1:855)",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:144:23)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:183:5)",
-        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
-        "Module._compile (node:internal/modules/cjs/loader:1812:14)",
-        "Module.m._compile (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\index.ts:1618:23)",
-        "node:internal/modules/cjs/loader:1943:10",
-        "Object.require.extensions.<computed> [as .ts] (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\index.ts:1621:12)",
-        "Module.load (node:internal/modules/cjs/loader:1533:32)",
-        "Module._load (node:internal/modules/cjs/loader:1335:12)",
-        "wrapModuleLoad (node:internal/modules/cjs/loader:255:19)",
-        "Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)",
-        "phase4 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\bin.ts:649:14)",
-        "bootstrap (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\bin.ts:95:10)",
-        "main (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\bin.ts:55:10)",
-        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\bin.ts:800:3)",
-        "Module._compile (node:internal/modules/cjs/loader:1812:14)",
-        "Object.<anonymous> (node:internal/modules/cjs/loader:1943:10)",
-        "Module.load (node:internal/modules/cjs/loader:1533:32)",
-        "Module._load (node:internal/modules/cjs/loader:1335:12)",
-        "wrapModuleLoad (node:internal/modules/cjs/loader:255:19)",
-        "Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)",
-        "node:internal/main/run_main_module:33:47"
-      ]
-    },
-    {
-      "type": "aws:cdk:warning",
-      "data": "minHealthyPercent has not been configured so the default value of 50% is used. The number of running tasks will decrease below the desired count during deployments etc. See https://github.com/aws/aws-cdk/issues/31705 [ack: @aws-cdk/aws-ecs:minHealthyPercent]",
-      "trace": [
-        "Annotations.addMessage (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\annotations.js:1:3441)",
-        "Annotations.addWarningV2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\annotations.js:1:2129)",
-        "new BaseService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ecs\\lib\\base\\base-service.js:1:16295)",
-        "new BaseService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\no-box-stack-traces.js:1:345)",
-        "new FargateService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-ecs\\lib\\fargate\\fargate-service.js:1:7829)",
-        "new FargateService2 (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\core\\lib\\prop-injectable.js:1:855)",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:144:23)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:183:5)",
-        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:134:23)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:172:5)",
+        "Object.<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "Module._compile (node:internal/modules/cjs/loader:1812:14)",
         "Module.m._compile (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\ts-node\\src\\index.ts:1618:23)",
         "node:internal/modules/cjs/loader:1943:10",
@@ -226,8 +156,8 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:186:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:175:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -240,8 +170,8 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:191:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:180:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -282,7 +212,7 @@
       "data": [
         "...new Repository2 in aws-cdk-lib...",
         "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:31:24)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -297,22 +227,7 @@
       "data": [
         "...new Repository2 in aws-cdk-lib...",
         "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:37:29)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
-        "...node internals, ts-node, ts-node..."
-      ]
-    }
-  ],
-  "/RoomHop-Compute/AdminServiceRepo/Resource": [
-    {
-      "type": "aws:cdk:logicalId",
-      "data": "AdminServiceRepo3C15DE77"
-    },
-    {
-      "type": "aws:cdk:creationStack",
-      "data": [
-        "...new Repository2 in aws-cdk-lib...",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:43:23)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -326,8 +241,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Cluster2 in aws-cdk-lib...",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:50:21)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:44:21)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -341,8 +256,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new ApplicationLoadBalancer2 in aws-cdk-lib...",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:58:16)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:52:16)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -356,8 +271,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Role2 in aws-cdk-lib...",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:77:31)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:71:31)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -371,8 +286,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Role2 in aws-cdk-lib...",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:88:22)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:82:22)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -386,9 +301,9 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new LogGroup2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:111:24)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:181:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:104:24)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:171:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -402,9 +317,9 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new FargateTaskDefinition2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:117:30)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:181:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:110:30)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:171:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node..."
       ]
     }
@@ -418,9 +333,9 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new FargateService2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:144:23)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:181:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:134:23)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:171:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node..."
       ]
     }
@@ -434,9 +349,9 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new ApplicationTargetGroup2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:155:27)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:181:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:145:27)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:171:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node..."
       ]
     }
@@ -450,9 +365,9 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new ApplicationListenerRule2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:170:7)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:181:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:160:7)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:171:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -466,9 +381,9 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new LogGroup2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:111:24)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:182:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:104:24)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:172:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -482,9 +397,9 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new FargateTaskDefinition2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:117:30)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:182:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:110:30)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:172:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node..."
       ]
     }
@@ -498,9 +413,9 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new FargateService2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:144:23)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:182:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:134:23)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:172:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node..."
       ]
     }
@@ -514,9 +429,9 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new ApplicationTargetGroup2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:155:27)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:182:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:145:27)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:172:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node..."
       ]
     }
@@ -530,89 +445,9 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new ApplicationListenerRule2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:170:7)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:182:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
-        "...node internals, ts-node, ts-node..."
-      ]
-    }
-  ],
-  "/RoomHop-Compute/adminLogs/Resource": [
-    {
-      "type": "aws:cdk:logicalId",
-      "data": "adminLogs4B1EE993"
-    },
-    {
-      "type": "aws:cdk:creationStack",
-      "data": [
-        "...new LogGroup2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:111:24)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:183:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
-        "...node internals, ts-node, ts-node..."
-      ]
-    }
-  ],
-  "/RoomHop-Compute/adminTaskDef/Resource": [
-    {
-      "type": "aws:cdk:logicalId",
-      "data": "adminTaskDef0AAAB031"
-    },
-    {
-      "type": "aws:cdk:creationStack",
-      "data": [
-        "...new FargateTaskDefinition2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:117:30)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:183:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
-        "...node internals, ts-node..."
-      ]
-    }
-  ],
-  "/RoomHop-Compute/adminService/Service": [
-    {
-      "type": "aws:cdk:logicalId",
-      "data": "adminServiceA8CFDFB4"
-    },
-    {
-      "type": "aws:cdk:creationStack",
-      "data": [
-        "...new FargateService2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:144:23)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:183:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
-        "...node internals, ts-node..."
-      ]
-    }
-  ],
-  "/RoomHop-Compute/adminTg/Resource": [
-    {
-      "type": "aws:cdk:logicalId",
-      "data": "adminTg2B98997C"
-    },
-    {
-      "type": "aws:cdk:creationStack",
-      "data": [
-        "...new ApplicationTargetGroup2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:155:27)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:183:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
-        "...node internals, ts-node..."
-      ]
-    }
-  ],
-  "/RoomHop-Compute/adminRule/Resource": [
-    {
-      "type": "aws:cdk:logicalId",
-      "data": "adminRuleFF4D4E45"
-    },
-    {
-      "type": "aws:cdk:creationStack",
-      "data": [
-        "...new ApplicationListenerRule2 in aws-cdk-lib...",
-        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:170:7)",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:183:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "createService (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:160:7)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:172:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -626,7 +461,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...App.synth in aws-cdk-lib...",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:73:5)",
         "...node internals..."
       ]
     }
@@ -640,7 +475,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...App.synth in aws-cdk-lib...",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:73:5)",
         "...node internals..."
       ]
     }
@@ -654,8 +489,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.<anonymous> in aws-cdk-lib...",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:67:33)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)",
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:61:33)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)",
         "...node internals..."
       ]
     }
@@ -669,8 +504,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.grantRead in aws-cdk-lib...",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:85:14)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)"
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:79:14)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)"
       ]
     }
   ],
@@ -683,8 +518,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.grantRead in aws-cdk-lib...",
-        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:92:14)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:40:22)"
+        "new ComputeStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\compute-stack.ts:86:14)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:32:22)"
       ]
     }
   ]

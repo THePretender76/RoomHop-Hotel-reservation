@@ -1,5 +1,5 @@
-// Base URL — use the API directly for local dev; KrakenD (port 8080) in production
-const BASE_URL = 'http://localhost:3000';
+// Base URL — API Gateway in production, localhost for local dev
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 /**
  * Make a GET request to the API gateway.

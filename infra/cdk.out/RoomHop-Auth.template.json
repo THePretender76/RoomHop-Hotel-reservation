@@ -172,7 +172,7 @@
     "Fn::Join": [
      "",
      [
-      "https://cognito-idp.eu-west-1.amazonaws.com/",
+      "https://cognito-idp.us-east-1.amazonaws.com/",
       {
        "Ref": "RoomHopUserPoolC1700735"
       }

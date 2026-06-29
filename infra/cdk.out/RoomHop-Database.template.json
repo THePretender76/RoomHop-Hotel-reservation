@@ -108,7 +108,7 @@
     },
     "MasterUsername": "roomhop_admin",
     "MaxAllocatedStorage": 200,
-    "MultiAZ": true,
+    "MultiAZ": false,
     "PerformanceInsightsRetentionPeriod": 7,
     "Port": "3306",
     "PubliclyAccessible": false,
@@ -158,17 +158,6 @@
    },
    "Export": {
     "Name": "RoomHop-Database:ExportsOutputRefRoomHopDbSecretAttachment273AC49D03471222"
-   }
-  },
-  "ExportsOutputFnGetAttRoomHopDbE208ABCAEndpointAddressA34827BE": {
-   "Value": {
-    "Fn::GetAtt": [
-     "RoomHopDbE208ABCA",
-     "Endpoint.Address"
-    ]
-   },
-   "Export": {
-    "Name": "RoomHop-Database:ExportsOutputFnGetAttRoomHopDbE208ABCAEndpointAddressA34827BE"
    }
   }
  },

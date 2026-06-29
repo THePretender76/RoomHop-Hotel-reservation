@@ -3,7 +3,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:76:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:68:24)",
         "...node internals, ts-node, ts-node, ts-node..."
       ]
     }
@@ -23,7 +23,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new AnalyticsStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\analytics-stack.ts:36:28)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:76:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:68:24)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -37,7 +37,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new AnalyticsStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\analytics-stack.ts:57:26)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:76:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:68:24)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -51,7 +51,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new AnalyticsStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\analytics-stack.ts:67:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:76:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:68:24)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -65,7 +65,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new AnalyticsStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\analytics-stack.ts:120:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:76:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:68:24)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -79,7 +79,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new AnalyticsStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\analytics-stack.ts:125:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:76:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:68:24)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -93,7 +93,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new AnalyticsStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\analytics-stack.ts:130:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:76:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:68:24)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -134,7 +134,7 @@
       "data": [
         "...new Bucket2 in aws-cdk-lib...",
         "new AnalyticsStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\analytics-stack.ts:21:33)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:76:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:68:24)",
         "...node internals, ts-node, ts-node..."
       ]
     },
@@ -180,7 +180,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...App.synth in aws-cdk-lib...",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:73:5)",
         "...node internals..."
       ]
     }
@@ -195,7 +195,7 @@
       "data": [
         "...new Bucket2 in aws-cdk-lib...",
         "new AnalyticsStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\analytics-stack.ts:21:33)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:76:24)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:68:24)",
         "...node internals..."
       ]
     },

@@ -143,13 +143,6 @@ export class FrontendStack extends cdk.Stack {
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
       },
       additionalBehaviors: {
-        // Hotel images from separate S3 bucket
-        '/images/*': {
-          origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(imagesBucket),
-          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-        },
         // API proxy to API Gateway
         '/api/*': {
           origin: new cloudfrontOrigins.HttpOrigin(

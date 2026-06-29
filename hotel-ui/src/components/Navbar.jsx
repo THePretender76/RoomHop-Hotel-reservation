@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { IMAGES_BASE } from '../config';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
@@ -23,7 +24,7 @@ export default function Navbar() {
     <header className={`${styles.header} ${scrolled ? styles.scrolled : ''}`}>
       <nav className={styles.nav}>
         <Link to="/" className={styles.brand}>
-          <img src="http://localhost:9000/hotels/logo.png" alt="RoomHop" className={styles.brandLogo} />
+          <img src={`${IMAGES_BASE}/logo.png`} alt="RoomHop" className={styles.brandLogo} />
           <span className={styles.brandName}>RoomHop</span>
         </Link>
 

@@ -3,7 +3,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:63:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node, ts-node..."
       ]
     }
@@ -17,7 +17,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:51:20)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:63:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -31,7 +31,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:190:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:63:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -45,7 +45,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:195:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:63:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -59,7 +59,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:200:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:63:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -73,7 +73,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:205:5)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:63:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -114,7 +114,7 @@
       "data": [
         "...new Bucket2 in aws-cdk-lib...",
         "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:23:27)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:63:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -129,7 +129,7 @@
       "data": [
         "...new Bucket2 in aws-cdk-lib...",
         "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:32:26)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:63:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -144,7 +144,7 @@
       "data": [
         "...new Distribution2 in aws-cdk-lib...",
         "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:134:26)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:63:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -158,7 +158,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...App.synth in aws-cdk-lib...",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:81:5)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:73:5)",
         "...node internals..."
       ]
     }
@@ -199,7 +199,7 @@
       "data": [
         "...new Distribution2 in aws-cdk-lib...",
         "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:134:26)",
-        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:63:23)",
+        "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals..."
       ]
     }

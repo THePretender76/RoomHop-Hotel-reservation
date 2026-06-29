@@ -23,13 +23,10 @@
     },
     "ClusterConfig": {
      "DedicatedMasterEnabled": false,
-     "InstanceCount": 2,
+     "InstanceCount": 1,
      "InstanceType": "t3.small.search",
      "MultiAZWithStandbyEnabled": false,
-     "ZoneAwarenessConfig": {
-      "AvailabilityZoneCount": 2
-     },
-     "ZoneAwarenessEnabled": true
+     "ZoneAwarenessEnabled": false
     },
     "DomainEndpointOptions": {
      "EnforceHTTPS": true,
@@ -92,7 +89,7 @@
        {
         "Ref": "AWS::Partition"
        },
-       ":iam::370314719865:root\\\"},\\\"Resource\\\":\\\"arn:aws:es:eu-west-1:",
+       ":iam::370314719865:root\\\"},\\\"Resource\\\":\\\"arn:aws:es:us-east-1:",
        {
         "Ref": "AWS::AccountId"
        },
@@ -116,7 +113,7 @@
        {
         "Ref": "AWS::Partition"
        },
-       ":iam::370314719865:root\\\"},\\\"Resource\\\":\\\"arn:aws:es:eu-west-1:",
+       ":iam::370314719865:root\\\"},\\\"Resource\\\":\\\"arn:aws:es:us-east-1:",
        {
         "Ref": "AWS::AccountId"
        },
@@ -206,7 +203,7 @@
    "Type": "AWS::Lambda::Function",
    "Properties": {
     "Code": {
-     "S3Bucket": "cdk-hnb659fds-assets-370314719865-eu-west-1",
+     "S3Bucket": "cdk-hnb659fds-assets-370314719865-us-east-1",
      "S3Key": "9b8fce7ae7f25ef82fdbaf6b72523b99d0875c0c9c826642819fb51f11d9b125.zip"
     },
     "Handler": "index.handler",

@@ -176,7 +176,7 @@
       "Fn::Join": [
        "",
        [
-        "https://cognito-idp.eu-west-1.amazonaws.com/",
+        "https://cognito-idp.us-east-1.amazonaws.com/",
         {
          "Fn::ImportValue": "RoomHop-Auth:ExportsOutputRefRoomHopUserPoolC17007352E3CF560"
         }
@@ -296,114 +296,6 @@
    },
    "Metadata": {
     "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/PUT--v1--reservations--{proxy+}/Resource"
-   }
-  },
-  "RoomHopHttpApiGETv1adminproxyC5BB2991": {
-   "Type": "AWS::ApiGatewayV2::Route",
-   "Properties": {
-    "ApiId": {
-     "Ref": "RoomHopHttpApi9210E602"
-    },
-    "AuthorizationType": "JWT",
-    "AuthorizerId": {
-     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
-    },
-    "RouteKey": "GET /v1/admin/{proxy+}",
-    "Target": {
-     "Fn::Join": [
-      "",
-      [
-       "integrations/",
-       {
-        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
-       }
-      ]
-     ]
-    }
-   },
-   "Metadata": {
-    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/GET--v1--admin--{proxy+}/Resource"
-   }
-  },
-  "RoomHopHttpApiPOSTv1adminproxyD0654040": {
-   "Type": "AWS::ApiGatewayV2::Route",
-   "Properties": {
-    "ApiId": {
-     "Ref": "RoomHopHttpApi9210E602"
-    },
-    "AuthorizationType": "JWT",
-    "AuthorizerId": {
-     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
-    },
-    "RouteKey": "POST /v1/admin/{proxy+}",
-    "Target": {
-     "Fn::Join": [
-      "",
-      [
-       "integrations/",
-       {
-        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
-       }
-      ]
-     ]
-    }
-   },
-   "Metadata": {
-    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/POST--v1--admin--{proxy+}/Resource"
-   }
-  },
-  "RoomHopHttpApiPUTv1adminproxyC6C23693": {
-   "Type": "AWS::ApiGatewayV2::Route",
-   "Properties": {
-    "ApiId": {
-     "Ref": "RoomHopHttpApi9210E602"
-    },
-    "AuthorizationType": "JWT",
-    "AuthorizerId": {
-     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
-    },
-    "RouteKey": "PUT /v1/admin/{proxy+}",
-    "Target": {
-     "Fn::Join": [
-      "",
-      [
-       "integrations/",
-       {
-        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
-       }
-      ]
-     ]
-    }
-   },
-   "Metadata": {
-    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/PUT--v1--admin--{proxy+}/Resource"
-   }
-  },
-  "RoomHopHttpApiDELETEv1adminproxy675BC849": {
-   "Type": "AWS::ApiGatewayV2::Route",
-   "Properties": {
-    "ApiId": {
-     "Ref": "RoomHopHttpApi9210E602"
-    },
-    "AuthorizationType": "JWT",
-    "AuthorizerId": {
-     "Ref": "RoomHopHttpApiCognitoAuthorizer0C2794F4"
-    },
-    "RouteKey": "DELETE /v1/admin/{proxy+}",
-    "Target": {
-     "Fn::Join": [
-      "",
-      [
-       "integrations/",
-       {
-        "Ref": "RoomHopHttpApiGETv1searchAlbIntegration417049CD"
-       }
-      ]
-     ]
-    }
-   },
-   "Metadata": {
-    "aws:cdk:path": "RoomHop-Api/RoomHopHttpApi/DELETE--v1--admin--{proxy+}/Resource"
    }
   },
   "CDKMetadata": {

@@ -5,7 +5,6 @@ import { CONFIG } from '../lib/config';
 import { NetworkStack } from '../lib/network-stack';
 import { DatabaseStack } from '../lib/database-stack';
 import { ComputeStack } from '../lib/compute-stack';
-import { SearchStack } from '../lib/search-stack';
 import { AuthStack } from '../lib/auth-stack';
 import { ApiStack } from '../lib/api-stack';
 import { FrontendStack } from '../lib/frontend-stack';
@@ -22,28 +21,21 @@ const env = {
 // Stack 1: Networking (VPC, Subnets, Endpoints, Security Groups)
 const networkStack = new NetworkStack(app, 'RoomHop-Network', { env });
 
-// Stack 2: Database (RDS Multi-AZ, Secrets Manager)
+// Stack 2: Database (RDS Single-AZ, Secrets Manager)
 const databaseStack = new DatabaseStack(app, 'RoomHop-Database', {
   env,
   vpc: networkStack.vpc,
   securityGroups: networkStack.securityGroups,
 });
 
-// Stack 3: Search (OpenSearch in VPC)
-const searchStack = new SearchStack(app, 'RoomHop-Search', {
-  env,
-  vpc: networkStack.vpc,
-  securityGroups: networkStack.securityGroups,
-});
-
-// Stack 4: Compute (ECS Fargate, ALB, ECR)
+// Stack 3: Compute (ECS Fargate, ALB, ECR) — search queries MySQL directly
 const computeStack = new ComputeStack(app, 'RoomHop-Compute', {
   env,
   vpc: networkStack.vpc,
   securityGroups: networkStack.securityGroups,
   dbSecret: databaseStack.dbSecret,
   dbEndpoint: databaseStack.dbEndpoint,
-  opensearchEndpoint: searchStack.domainEndpoint,
+  opensearchEndpoint: 'not-used', // OpenSearch skipped in iteration 1
 });
 
 // Stack 5: Authentication (Cognito)

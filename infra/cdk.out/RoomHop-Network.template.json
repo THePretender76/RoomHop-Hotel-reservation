@@ -21,7 +21,7 @@
   "RoomHopVpcPrivateSubnet1SubnetF4CFC437": {
    "Type": "AWS::EC2::Subnet",
    "Properties": {
-    "AvailabilityZone": "eu-west-1a",
+    "AvailabilityZone": "us-east-1a",
     "CidrBlock": "10.0.0.0/24",
     "MapPublicIpOnLaunch": false,
     "Tags": [
@@ -80,7 +80,7 @@
   "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F": {
    "Type": "AWS::EC2::Subnet",
    "Properties": {
-    "AvailabilityZone": "eu-west-1b",
+    "AvailabilityZone": "us-east-1b",
     "CidrBlock": "10.0.1.0/24",
     "MapPublicIpOnLaunch": false,
     "Tags": [
@@ -186,7 +186,7 @@
       ]
      }
     ],
-    "ServiceName": "com.amazonaws.eu-west-1.ecr.api",
+    "ServiceName": "com.amazonaws.us-east-1.ecr.api",
     "SubnetIds": [
      {
       "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
@@ -222,7 +222,7 @@
       ]
      }
     ],
-    "ServiceName": "com.amazonaws.eu-west-1.ecr.dkr",
+    "ServiceName": "com.amazonaws.us-east-1.ecr.dkr",
     "SubnetIds": [
      {
       "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
@@ -258,7 +258,7 @@
       ]
      }
     ],
-    "ServiceName": "com.amazonaws.eu-west-1.logs",
+    "ServiceName": "com.amazonaws.us-east-1.logs",
     "SubnetIds": [
      {
       "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
@@ -294,7 +294,7 @@
       ]
      }
     ],
-    "ServiceName": "com.amazonaws.eu-west-1.secretsmanager",
+    "ServiceName": "com.amazonaws.us-east-1.secretsmanager",
     "SubnetIds": [
      {
       "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
@@ -330,7 +330,7 @@
       ]
      }
     ],
-    "ServiceName": "com.amazonaws.eu-west-1.events",
+    "ServiceName": "com.amazonaws.us-east-1.events",
     "SubnetIds": [
      {
       "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
@@ -366,7 +366,7 @@
       ]
      }
     ],
-    "ServiceName": "com.amazonaws.eu-west-1.sqs",
+    "ServiceName": "com.amazonaws.us-east-1.sqs",
     "SubnetIds": [
      {
       "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
@@ -402,7 +402,7 @@
       ]
      }
     ],
-    "ServiceName": "com.amazonaws.eu-west-1.email-smtp",
+    "ServiceName": "com.amazonaws.us-east-1.email-smtp",
     "SubnetIds": [
      {
       "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
@@ -708,17 +708,6 @@
    },
    "Export": {
     "Name": "RoomHop-Network:ExportsOutputFnGetAttRdsSg7F9F43B6GroupId133E31A8"
-   }
-  },
-  "ExportsOutputFnGetAttOpenSearchSg98CA9349GroupId88A48A6B": {
-   "Value": {
-    "Fn::GetAtt": [
-     "OpenSearchSg98CA9349",
-     "GroupId"
-    ]
-   },
-   "Export": {
-    "Name": "RoomHop-Network:ExportsOutputFnGetAttOpenSearchSg98CA9349GroupId88A48A6B"
    }
   },
   "ExportsOutputFnGetAttAlbSg1155C1BEGroupIdF2A72E65": {

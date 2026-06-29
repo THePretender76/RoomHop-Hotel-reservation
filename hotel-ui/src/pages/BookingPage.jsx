@@ -1,6 +1,7 @@
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useBooking } from '../hooks/useBooking';
+import { IMAGES_BASE } from '../config';
 import styles from './BookingPage.module.css';
 
 const NATIONALITIES = [
@@ -278,7 +279,7 @@ export default function BookingPage() {
           <h2 className={styles.sectionTitle}>Hotel &amp; Room Summary</h2>
           <div className={styles.summaryHeader}>
             <img
-              src={hotel.primary_image_url || 'http://localhost:9000/hotels/placeholder_image/hotel-1.jpg'}
+              src={hotel.primary_image_url || `${IMAGES_BASE}/placeholder_image/hotel-1.jpg`}
               alt={hotel.name}
               className={styles.summaryImage}
             />
