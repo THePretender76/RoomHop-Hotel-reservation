@@ -1,0 +1,8 @@
+{
+  "name": "db-migration",
+  "version": "1.0.0",
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.600.0",
+    "mysql2": "^3.22.5"
+  }
+}

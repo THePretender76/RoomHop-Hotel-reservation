@@ -1,0 +1,129 @@
+﻿import * as cdk from 'aws-cdk-lib';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as rds from 'aws-cdk-lib/aws-rds';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as cr from 'aws-cdk-lib/custom-resources';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as path from 'path';
+import { Construct } from 'constructs';
+import { CONFIG } from './config';
+import { SecurityGroups } from './network-stack';
+
+export interface DatabaseStackProps extends cdk.StackProps {
+  vpc: ec2.Vpc;
+  securityGroups: SecurityGroups;
+}
+
+export class DatabaseStack extends cdk.Stack {
+  public readonly dbSecret: secretsmanager.ISecret;
+  public readonly dbEndpoint: string;
+
+  constructor(scope: Construct, id: string, props: DatabaseStackProps) {
+    super(scope, id, props);
+
+    const { vpc, securityGroups } = props;
+
+    // â”€â”€â”€ RDS MySQL 8.0 Multi-AZ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Credentials auto-generated and stored in Secrets Manager.
+    // Placed in private isolated subnets â€” no public accessibility.
+    const dbInstance = new rds.DatabaseInstance(this, 'RoomHopDb', {
+      engine: rds.DatabaseInstanceEngine.mysql({
+        version: rds.MysqlEngineVersion.VER_8_0,
+      }),
+      instanceType: ec2.InstanceType.of(
+        ec2.InstanceClass.T3,
+        ec2.InstanceSize.MEDIUM
+      ),
+      vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [securityGroups.rdsSg],
+      multiAz: false,
+      allocatedStorage: 50,
+      maxAllocatedStorage: 200,
+      storageEncrypted: true,
+      databaseName: CONFIG.rds.databaseName,
+      port: CONFIG.rds.port,
+      credentials: rds.Credentials.fromGeneratedSecret('roomhop_admin', {
+        secretName: `${CONFIG.projectName}/rds/credentials`,
+      }),
+      backupRetention: cdk.Duration.days(7),
+      deletionProtection: false,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      publiclyAccessible: false,
+      // Performance Insights for production observability
+      enablePerformanceInsights: true,
+      parameterGroup: new rds.ParameterGroup(this, 'DbParamGroup', {
+        engine: rds.DatabaseInstanceEngine.mysql({
+          version: rds.MysqlEngineVersion.VER_8_0,
+        }),
+        parameters: {
+          character_set_server: 'utf8mb4',
+          collation_server: 'utf8mb4_unicode_ci',
+        },
+      }),
+    });
+
+    this.dbSecret = dbInstance.secret!;
+    this.dbEndpoint = dbInstance.dbInstanceEndpointAddress;
+
+    // â”€â”€â”€ Database Migration Lambda â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Runs migration SQL on stack CREATE. Uses a Custom Resource so it executes
+    // automatically during deployment without manual intervention.
+    const migrationLambda = new lambda.Function(this, 'DbMigrationFn', {
+      functionName: `${CONFIG.projectName}-db-migration`,
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../services/lambda/db-migration')),
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 512,
+      vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [securityGroups.lambdaSg],
+      environment: {
+        DB_SECRET_ARN: dbInstance.secret!.secretArn,
+        DB_NAME: CONFIG.rds.databaseName,
+      },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+
+    // Grant the migration Lambda access to read the DB secret
+    dbInstance.secret!.grantRead(migrationLambda);
+
+    // Allow the Lambda SG to connect to RDS on MySQL port
+    securityGroups.rdsSg.addIngressRule(
+      securityGroups.lambdaSg,
+      ec2.Port.tcp(CONFIG.rds.port),
+      'Allow MySQL from migration Lambda'
+    );
+
+    // Custom Resource Provider
+    const migrationProvider = new cr.Provider(this, 'DbMigrationProvider', {
+      onEventHandler: migrationLambda,
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+
+    // Custom Resource â€” triggers the migration Lambda on stack CREATE
+    const migrationResource = new cdk.CustomResource(this, 'DbMigration', {
+      serviceToken: migrationProvider.serviceToken,
+      properties: {
+        // Change this value to force re-run of migration on next deploy
+        migrationVersion: '4',
+      },
+    });
+
+    // Ensure migration runs AFTER RDS is ready
+    migrationResource.node.addDependency(dbInstance);
+
+    // â”€â”€â”€ Outputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    new cdk.CfnOutput(this, 'DbEndpoint', {
+      value: this.dbEndpoint,
+      description: 'RDS MySQL endpoint address',
+    });
+
+    new cdk.CfnOutput(this, 'DbSecretArn', {
+      value: this.dbSecret.secretArn,
+      description: 'ARN of the database credentials secret',
+    });
+  }
+}
