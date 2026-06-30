@@ -1,7 +1,7 @@
 {
   "name": "search-service",
-  "version": "1.0.0",
-  "description": "RoomHop hotel search service — AWS ECS deployment",
+  "version": "2.0.0",
+  "description": "RoomHop hotel search service — AWS ECS (OpenSearch + MySQL fallback)",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js"
@@ -11,6 +11,8 @@
     "mysql2": "^3.22.5",
     "cors": "^2.8.6",
     "winston": "^3.11.0",
-    "@aws-sdk/client-secrets-manager": "^3.600.0"
+    "@aws-sdk/client-secrets-manager": "^3.600.0",
+    "@aws-sdk/credential-provider-node": "^3.600.0",
+    "@opensearch-project/opensearch": "^2.6.0"
   }
 }

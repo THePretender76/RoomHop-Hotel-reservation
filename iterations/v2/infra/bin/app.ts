@@ -4,15 +4,14 @@ import * as cdk from 'aws-cdk-lib';
 import { CONFIG } from '../lib/config';
 import { NetworkStack } from '../lib/network-stack';
 import { DatabaseStack } from '../lib/database-stack';
+import { OpenSearchStack } from '../lib/opensearch-stack';
+import { DmsStack } from '../lib/dms-stack';
 import { ComputeStack } from '../lib/compute-stack';
 import { AuthStack } from '../lib/auth-stack';
 import { ApiStack } from '../lib/api-stack';
 import { FrontendStack } from '../lib/frontend-stack';
 import { EventsStack } from '../lib/events-stack';
 import { AnalyticsStack } from '../lib/analytics-stack';
-// TODO: Import OpenSearchStack and DmsStack for iteration 2
-// import { OpenSearchStack } from '../lib/opensearch-stack';
-// import { DmsStack } from '../lib/dms-stack';
 
 const app = new cdk.App();
 
@@ -31,22 +30,23 @@ const databaseStack = new DatabaseStack(app, 'RoomHop-V2-Database', {
   securityGroups: networkStack.securityGroups,
 });
 
-// TODO: Stack 3: OpenSearch
-// const opensearchStack = new OpenSearchStack(app, 'RoomHop-V2-OpenSearch', {
-//   env,
-//   vpc: networkStack.vpc,
-//   securityGroups: networkStack.securityGroups,
-// });
+// Stack 3: OpenSearch (full-text search domain)
+const opensearchStack = new OpenSearchStack(app, 'RoomHop-V2-OpenSearch', {
+  env,
+  vpc: networkStack.vpc,
+  securityGroups: networkStack.securityGroups,
+});
 
-// TODO: Stack 4: DMS (CDC from RDS → OpenSearch)
-// const dmsStack = new DmsStack(app, 'RoomHop-V2-DMS', {
-//   env,
-//   vpc: networkStack.vpc,
-//   securityGroups: networkStack.securityGroups,
-//   dbSecret: databaseStack.dbSecret,
-//   dbEndpoint: databaseStack.dbEndpoint,
-//   opensearchEndpoint: opensearchStack.domainEndpoint,
-// });
+// Stack 4: DMS (CDC from RDS → OpenSearch)
+const dmsStack = new DmsStack(app, 'RoomHop-V2-DMS', {
+  env,
+  vpc: networkStack.vpc,
+  securityGroups: networkStack.securityGroups,
+  dbSecret: databaseStack.dbSecret,
+  dbEndpoint: databaseStack.dbEndpoint,
+  opensearchEndpoint: opensearchStack.domainEndpoint,
+  opensearchArn: opensearchStack.domainArn,
+});
 
 // Stack 5: Compute — search queries OpenSearch in v2
 const computeStack = new ComputeStack(app, 'RoomHop-V2-Compute', {
@@ -55,7 +55,7 @@ const computeStack = new ComputeStack(app, 'RoomHop-V2-Compute', {
   securityGroups: networkStack.securityGroups,
   dbSecret: databaseStack.dbSecret,
   dbEndpoint: databaseStack.dbEndpoint,
-  opensearchEndpoint: 'TODO-opensearch-endpoint', // Will come from opensearchStack
+  opensearchEndpoint: opensearchStack.domainEndpoint,
 });
 
 // Stack 6: Authentication
