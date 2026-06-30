@@ -1,7 +1,11 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as cr from 'aws-cdk-lib/custom-resources';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as path from 'path';
 import { Construct } from 'constructs';
 import { CONFIG } from './config';
 import { SecurityGroups } from './network-stack';
@@ -62,6 +66,54 @@ export class DatabaseStack extends cdk.Stack {
 
     this.dbSecret = dbInstance.secret!;
     this.dbEndpoint = dbInstance.dbInstanceEndpointAddress;
+
+    // ─── Database Migration Lambda ──────────────────────────────────────────────
+    // Runs migration SQL on stack CREATE. Uses a Custom Resource so it executes
+    // automatically during deployment without manual intervention.
+    const migrationLambda = new lambda.Function(this, 'DbMigrationFn', {
+      functionName: `${CONFIG.projectName}-db-migration`,
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../services/lambda/db-migration')),
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 512,
+      vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [securityGroups.lambdaSg],
+      environment: {
+        DB_SECRET_ARN: dbInstance.secret!.secretArn,
+        DB_NAME: CONFIG.rds.databaseName,
+      },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+
+    // Grant the migration Lambda access to read the DB secret
+    dbInstance.secret!.grantRead(migrationLambda);
+
+    // Allow the Lambda SG to connect to RDS on MySQL port
+    securityGroups.rdsSg.addIngressRule(
+      securityGroups.lambdaSg,
+      ec2.Port.tcp(CONFIG.rds.port),
+      'Allow MySQL from migration Lambda'
+    );
+
+    // Custom Resource Provider
+    const migrationProvider = new cr.Provider(this, 'DbMigrationProvider', {
+      onEventHandler: migrationLambda,
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+
+    // Custom Resource — triggers the migration Lambda on stack CREATE
+    const migrationResource = new cdk.CustomResource(this, 'DbMigration', {
+      serviceToken: migrationProvider.serviceToken,
+      properties: {
+        // Change this value to force re-run of migration on next deploy
+        migrationVersion: '1',
+      },
+    });
+
+    // Ensure migration runs AFTER RDS is ready
+    migrationResource.node.addDependency(dbInstance);
 
     // ─── Outputs ────────────────────────────────────────────────────────────────
     new cdk.CfnOutput(this, 'DbEndpoint', {
