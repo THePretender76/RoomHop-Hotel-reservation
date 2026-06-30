@@ -33,7 +33,13 @@ export async function apiGet(path, params = {}) {
     }
   });
 
-  const response = await fetch(url.toString());
+  const authHeaders = await getAuthHeaders();
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      ...authHeaders,
+    },
+  });
 
   if (!response.ok) {
     let errorData = {};

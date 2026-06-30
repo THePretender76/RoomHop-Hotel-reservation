@@ -7,7 +7,7 @@ const { validateSearchParams } = require('../middleware/validate');
 const logger = require('../logger');
 
 // CloudFront CDN base URL for hotel images
-const CDN_BASE_URL = process.env.CDN_BASE_URL || 'https://d1234.cloudfront.net';
+const CDN_BASE_URL = process.env.CDN_BASE_URL || '';
 
 // ==============================
 // GET /v1/search
@@ -67,7 +67,6 @@ router.get('/', async (req, res) => {
         rt.name              AS room_type_name,
         rt.max_occupancy,
         rt.amenities,
-        rt.image_url         AS room_type_image_url,
         MIN(rtr.nightly_rate) AS nightly_rate,
         MIN(rti.total_inventory - rti.total_reserved) AS available_rooms_count,
         hi.image_url         AS primary_image_url
@@ -112,10 +111,7 @@ router.get('/', async (req, res) => {
     const results = rows.map((row) => ({
       ...row,
       primary_image_url: row.primary_image_url
-        ? `${CDN_BASE_URL}/hotels/${row.primary_image_url}`
-        : null,
-      room_type_image_url: row.room_type_image_url
-        ? `${CDN_BASE_URL}/hotels/${row.room_type_image_url}`
+        ? `${CDN_BASE_URL}/images/${row.primary_image_url}`
         : null,
     }));
 

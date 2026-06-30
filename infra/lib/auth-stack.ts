@@ -36,7 +36,7 @@ export class AuthStack extends cdk.Stack {
         tempPasswordValidity: cdk.Duration.days(7),
       },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
       // MFA optional for extra security
       mfa: cognito.Mfa.OPTIONAL,
       mfaSecondFactor: {

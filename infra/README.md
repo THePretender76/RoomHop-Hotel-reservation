@@ -10,7 +10,7 @@ This is the AWS production deployment of the RoomHop Hotel Booking Platform usin
 ┌──────────────────────────────────────────────────────────────────────┐
 │  Browser                                                              │
 │    ├── Cognito (JWT Authentication)                                   │
-│    └── CloudFront (WAF) → S3 Website + S3 Hotel Images               │
+│    └── CloudFront (WAF) → S3 Website + Hotel Images (/images/)        │
 └──────────────────┬───────────────────────────────────────────────────┘
                    │ HTTPS + JWT
                    ▼
@@ -67,52 +67,18 @@ This is the AWS production deployment of the RoomHop Hotel Booking Platform usin
 
 ---
 
-## Architecture Decisions
+## Full Deployment Guide (Step-by-Step)
 
-| Decision | Rationale |
-|----------|-----------|
-| No NAT Gateway | VPC Endpoints for all AWS service access — saves ~$32/month |
-| Private Isolated subnets only | Maximum security — no public subnets at all |
-| API Gateway + VPC Link | ALB has no public IP, traffic stays on AWS backbone |
-| ECS Fargate | No EC2 instances to manage, pay only when tasks run |
-| EventBridge + SQS | Replaces Kafka — fully serverless, no brokers to manage |
-| Lambda for notifications/analytics | Event-driven, scales to zero, no idle cost |
-| Secrets Manager for DB credentials | No hardcoded passwords, auto-rotation ready |
-| CloudFront + OAC | S3 buckets stay private, CDN for performance |
-| WAFv2 on CloudFront | Rate limiting, SQL injection, XSS protection |
-
----
-
-## CDK Stacks
-
-| Stack | Resources | Estimated Cost (testing) |
-|-------|-----------|--------------------------|
-| `RoomHop-Network` | VPC, 2 private subnets, 7 VPC Endpoints, 6 SGs | $0.07/hr |
-| `RoomHop-Database` | RDS MySQL Single-AZ (t3.medium), Secrets Manager | $0.07/hr |
-| `RoomHop-Compute` | ECS Cluster, 2 Fargate tasks, internal ALB, 2 ECR repos | $0.10/hr |
-| `RoomHop-Auth` | Cognito User Pool + Client | Free tier |
-| `RoomHop-Api` | HTTP API, VPC Link, JWT Authorizer | Pay per request |
-| `RoomHop-Frontend` | S3 buckets (website + images), CloudFront, WAFv2 | ~$0.01/hr |
-| `RoomHop-Events` | EventBridge bus, 2 SQS queues + DLQs, 2 Lambda functions | Free tier |
-| `RoomHop-Analytics` | Glue DB/Table, Athena workgroup, S3 results bucket | Pay per query |
-
-**Total estimated cost: ~$0.75–$1.00 for a 2.5-hour test session.**
-
----
-
-## Prerequisites
+### Prerequisites
 
 - **Node.js 18+**
 - **AWS CLI v2** configured with credentials (`aws configure`)
 - **AWS CDK CLI**: `npm install -g aws-cdk`
-- **Docker** (to build ECS service images)
+- **Docker Desktop** (must be running)
 - An AWS account with sufficient permissions
+- Hotel images available locally at `C:\temp\s3-proper\` (or wherever you stored them)
 
----
-
-## Deployment Steps
-
-### 1. Bootstrap CDK (first time only)
+### Step 1: Bootstrap CDK (first time only)
 
 ```bash
 cd infra
@@ -120,77 +86,174 @@ npm install
 npx cdk bootstrap aws://YOUR_ACCOUNT_ID/us-east-1
 ```
 
-### 2. Build and push Docker images
+### Step 2: Clean up leftover resources from previous deployments
+
+If you previously deployed and destroyed, remnant resources may conflict with CDK:
+
+```bash
+# Delete orphaned ECR repos (if they exist)
+aws ecr delete-repository --repository-name roomhop/search-service --region us-east-1 --force 2>nul
+aws ecr delete-repository --repository-name roomhop/reservation-service --region us-east-1 --force 2>nul
+
+# Delete orphaned S3 buckets (if they exist)
+aws s3 rb s3://roomhop-website-YOUR_ACCOUNT_ID --force 2>nul
+aws s3 rb s3://roomhop-hotel-images-YOUR_ACCOUNT_ID --force 2>nul
+aws s3 rb s3://roomhop-analytics-data-YOUR_ACCOUNT_ID --force 2>nul
+aws s3 rb s3://roomhop-athena-results-YOUR_ACCOUNT_ID --force 2>nul
+```
+
+> **Note**: For versioned buckets (website bucket), you may need to delete all object versions first:
+> ```powershell
+> $versions = aws s3api list-object-versions --bucket roomhop-website-YOUR_ACCOUNT_ID --region us-east-1 --output json | ConvertFrom-Json
+> $objects = @()
+> if ($versions.Versions) { foreach ($v in $versions.Versions) { $objects += @{Key=$v.Key; VersionId=$v.VersionId} } }
+> if ($versions.DeleteMarkers) { foreach ($d in $versions.DeleteMarkers) { $objects += @{Key=$d.Key; VersionId=$d.VersionId} } }
+> $delete = @{Objects=$objects; Quiet=$true}
+> $json = $delete | ConvertTo-Json -Depth 3 -Compress
+> $json | Out-File C:\temp\delete.json -Encoding ASCII
+> aws s3api delete-objects --bucket roomhop-website-YOUR_ACCOUNT_ID --region us-east-1 --delete "file://C:/temp/delete.json"
+> aws s3 rb s3://roomhop-website-YOUR_ACCOUNT_ID --region us-east-1
+> ```
+
+### Step 3: Deploy all CDK stacks (except Compute)
+
+Deploy everything except the Compute stack first (to avoid image pull failures):
+
+```bash
+cd infra
+npx cdk deploy RoomHop-Network RoomHop-Database RoomHop-Auth RoomHop-Events RoomHop-Analytics RoomHop-Frontend --require-approval never
+```
+
+This takes ~10-15 minutes (RDS creation is the slowest). The DB migration Lambda runs automatically and seeds the database.
+
+### Step 4: Deploy the Compute stack
+
+Now deploy Compute — CDK will create ECR repos:
+
+```bash
+npx cdk deploy RoomHop-Compute --require-approval never
+```
+
+> **Important**: This will create the ECR repos but ECS tasks will fail to start because no images exist yet. That's expected — we'll push images next.
+
+### Step 5: Build and push Docker images
 
 ```bash
 # Authenticate Docker with ECR
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
 
-# Build search service
+# Build and push search service
 cd services/search-service
 docker build -t roomhop/search-service:latest .
 docker tag roomhop/search-service:latest YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/roomhop/search-service:latest
 docker push YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/roomhop/search-service:latest
 
-# Build reservation service
+# Build and push reservation service
 cd ../reservation-service
 docker build -t roomhop/reservation-service:latest .
 docker tag roomhop/reservation-service:latest YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/roomhop/reservation-service:latest
 docker push YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/roomhop/reservation-service:latest
 ```
 
-### 3. Deploy all stacks
+### Step 6: Force ECS to pull new images
+
+```bash
+aws ecs update-service --cluster roomhop-cluster --service roomhop-search --force-new-deployment --region us-east-1
+aws ecs update-service --cluster roomhop-cluster --service roomhop-reservation --force-new-deployment --region us-east-1
+```
+
+Wait ~1-2 minutes for the tasks to become healthy.
+
+### Step 7: Deploy the API stack
+
+The API stack depends on Compute (needs the ALB listener ARN):
 
 ```bash
 cd infra
-npx cdk deploy --all --require-approval never
+npx cdk deploy RoomHop-Api --require-approval never
 ```
 
-Deployment takes ~15-20 minutes (RDS creation is the slowest).
+### Step 8: Note the CDK outputs
 
-### 4. Deploy the React frontend
+After deployment, note these values from the stack outputs:
 
 ```bash
-# Build the React app
+# Get all important outputs
+aws cloudformation describe-stacks --stack-name RoomHop-Frontend --region us-east-1 --query "Stacks[0].Outputs" --output table
+aws cloudformation describe-stacks --stack-name RoomHop-Api --region us-east-1 --query "Stacks[0].Outputs" --output table
+aws cloudformation describe-stacks --stack-name RoomHop-Auth --region us-east-1 --query "Stacks[0].Outputs" --output table
+```
+
+You'll need:
+- `CloudFrontUrl` — e.g. `https://dxxxxxx.cloudfront.net`
+- `WebsiteBucketName` — e.g. `roomhop-website-370314719865`
+- `DistributionId` — e.g. `E1TD4GYJ6F7LZO`
+- `ApiEndpoint` — e.g. `https://xxxxxxx.execute-api.us-east-1.amazonaws.com`
+- `UserPoolId` — e.g. `us-east-1_xxxxxxx`
+- `UserPoolClientId` — e.g. `xxxxxxxxxxxxxxxxx`
+
+### Step 9: Build and deploy the React frontend
+
+```powershell
 cd hotel-ui
+
+# Set environment variables (replace with YOUR actual CDK output values)
+$env:VITE_API_URL="<ApiEndpoint>"
+$env:VITE_IMAGES_URL="<CloudFrontUrl>/images"
+$env:VITE_COGNITO_USER_POOL_ID="<UserPoolId>"
+$env:VITE_COGNITO_CLIENT_ID="<UserPoolClientId>"
+$env:VITE_AWS_REGION="us-east-1"
+
+# Build
 npm run build
 
-# Upload to S3 (get bucket name from CDK outputs)
-aws s3 sync dist/ s3://roomhop-website-YOUR_ACCOUNT_ID/ --delete
-
-# Invalidate CloudFront cache
-aws cloudfront create-invalidation --distribution-id DIST_ID --paths "/*"
+# Upload to S3 (exclude images path to avoid deleting them later)
+aws s3 sync dist/ s3://<WebsiteBucketName>/ --exclude "images/*" --delete --region us-east-1
 ```
 
-### 5. Upload hotel images
+### Step 10: Upload hotel images
+
+Images are served from the **website bucket** under the `/images/` prefix (NOT from a separate images bucket):
 
 ```bash
-aws s3 sync local-images/ s3://roomhop-hotel-images-YOUR_ACCOUNT_ID/
+aws s3 sync C:\temp\s3-proper s3://<WebsiteBucketName>/images/ --region us-east-1
 ```
 
-### 6. Run database migrations
+> **Critical**: The database seeds reference specific filenames. Ensure these files exist:
+> - `hotel_beaux_arts.png` (Hotel Beaux Arts primary image)
+> - `hotel_grand_palais.png` (Hotel Grand Palais primary image — may need to copy from `grand_palais.png`)
+> - `hotel_marina.png` (Hotel Marina Bay primary image — may need to copy from `marina_bay.png`)
+>
+> If your source files have different names, copy them:
+> ```bash
+> aws s3 cp s3://<WebsiteBucketName>/images/grand_palais.png s3://<WebsiteBucketName>/images/hotel_grand_palais.png --region us-east-1
+> aws s3 cp s3://<WebsiteBucketName>/images/marina_bay.png s3://<WebsiteBucketName>/images/hotel_marina.png --region us-east-1
+> ```
 
-Connect to RDS via a bastion or Lambda function and run `database/migration_v2.sql` and `database/seed_v2.sql`.
-
-### 7. Verify SES email identity
+### Step 11: Invalidate CloudFront cache
 
 ```bash
-aws ses verify-email-identity --email-address your-test-email@example.com --region us-east-1
+aws cloudfront create-invalidation --distribution-id <DistributionId> --paths "/*" --region us-east-1
 ```
 
-Check your inbox and click the verification link. In SES sandbox, you can only send to verified addresses.
+### Step 12: Verify SES email (for booking confirmations)
 
----
+SES is in sandbox mode. You must verify both sender and recipient:
 
-## Post-Deployment Verification
+```bash
+aws ses verify-email-identity --email-address YOUR_EMAIL@gmail.com --region us-east-1
+```
 
-1. **Frontend**: Open the CloudFront URL from CDK outputs
-2. **Auth**: Sign up via Cognito → verify email → sign in
-3. **Search**: Use the search form → API Gateway → ALB → Search Service → RDS
-4. **Book**: Reserve a room → Reservation Service → RDS + EventBridge
-5. **Notification**: Check your email (SES) for booking confirmation
-6. **Analytics**: Check S3 analytics bucket for JSON records
-7. **Athena**: Run a query in the Athena console using the `roomhop_analytics` database
+Check your inbox (and spam) for the AWS verification link and click it.
+
+### Step 13: Test the site
+
+Open `<CloudFrontUrl>` in your browser:
+1. **Search**: Search for hotels in "Paris" with valid dates
+2. **Sign Up**: Create a Cognito account (check spam for verification code)
+3. **Book**: Select a room, fill in details, confirm booking
+4. **My Reservations**: Should auto-load your bookings (no guest ID needed)
+5. **Email**: Check for booking confirmation email
 
 ---
 
@@ -200,62 +263,102 @@ Check your inbox and click the verification link. In SES sandbox, you can only s
 
 ```bash
 cd infra
-npx cdk destroy --all
+npx cdk destroy --all --force
 ```
 
-If RDS has deletion protection (enabled by default), first disable it in the console or change `deletionProtection: false` in `database-stack.ts` and redeploy before destroying.
+Since all resources use `removalPolicy: DESTROY` and `deletionProtection: false`, this will cleanly remove everything including:
+- RDS instance (no deletion protection)
+- S3 buckets (auto-delete objects enabled)
+- ECR repos (auto-delete images)
+- All other resources
 
 ---
 
-## Project Structure
+## Troubleshooting
 
-```
-Hotel_Management_system/
-├── hotel-api/                 # Local development (Docker Compose)
-├── hotel-ui/                  # React SPA (shared between local + AWS)
-├── notification-service/      # Local Kafka consumer
-├── analytics-service/         # Local Kafka → Parquet
-│
-├── services/                  # ⭐ AWS-adapted application code
-│   ├── search-service/        #   ECS Fargate (Express + Secrets Manager)
-│   │   ├── Dockerfile
-│   │   └── src/
-│   ├── reservation-service/   #   ECS Fargate (Express + EventBridge)
-│   │   ├── Dockerfile
-│   │   └── src/
-│   └── lambda/
-│       ├── notification-handler/  # SQS → SES
-│       └── analytics-handler/     # SQS → S3
-│
-└── infra/                     # ⭐ AWS CDK TypeScript
-    ├── bin/app.ts             #   CDK app entry point
-    └── lib/
-        ├── config.ts          #   Shared configuration
-        ├── network-stack.ts   #   VPC, subnets, endpoints, SGs
-        ├── database-stack.ts  #   RDS MySQL, Secrets Manager
-        ├── compute-stack.ts   #   ECS Fargate, ALB, ECR
-        ├── auth-stack.ts      #   Cognito
-        ├── api-stack.ts       #   API Gateway, VPC Link
-        ├── frontend-stack.ts  #   S3, CloudFront, WAF
-        ├── events-stack.ts    #   EventBridge, SQS, Lambda
-        └── analytics-stack.ts #   Glue, Athena
-```
+### ECS tasks fail to start
+- Ensure Docker images are pushed to ECR before deploying Compute
+- Check CloudWatch logs: `/ecs/roomhop/search` and `/ecs/roomhop/reservation`
+
+### "Failed to fetch" on booking
+- Check API Gateway CORS allows `Idempotency-Key` header (already configured)
+- Verify the JWT token is valid (sign out and sign back in)
+
+### Images not loading
+- Ensure images are in `s3://<WebsiteBucketName>/images/` (NOT in the images bucket)
+- Check the filenames match what's in the database seed (see Step 10)
+
+### No booking confirmation email
+- Verify your email in SES (Step 12)
+- The sender email in `events-stack.ts` must be a verified SES address
+- Check the notification Lambda logs: `/aws/lambda/roomhop-notification-handler`
+- Check the notification DLQ for failed messages
+
+### Migration fails with "Table already exists"
+- The migration Lambda drops and recreates all tables on each run
+- If it fails, bump `migrationVersion` in `database-stack.ts` and redeploy
+
+### ECR repos already exist (CDK deploy fails)
+- Delete them manually: `aws ecr delete-repository --repository-name roomhop/search-service --region us-east-1 --force`
+
+### Search returns "Internal server error"
+- Check search service logs: `/ecs/roomhop/search`
+- Common cause: schema mismatch between the SQL query and actual table columns
 
 ---
 
-## Security Model
+## CDK Stacks
 
-| Layer | Protection |
+| Stack | Resources |
 |-------|-----------|
-| Edge | WAFv2 (rate limiting, SQLi, XSS, common exploits) |
-| CDN | CloudFront with OAC (S3 never public) |
-| Auth | Cognito JWT verified at API Gateway |
-| Network | Private subnets only, no public IPs, VPC Link |
-| ALB | Security group: only accepts traffic from VPC CIDR |
-| ECS | Security group: only accepts from ALB on port 3000 |
-| RDS | Security group: only accepts from ECS on port 3306 |
-| Secrets | Secrets Manager with IAM-scoped access |
-| Lambda | VPC-attached, least-privilege IAM roles |
+| `RoomHop-Network` | VPC, 2 private subnets, 8 VPC Endpoints, 6 Security Groups |
+| `RoomHop-Database` | RDS MySQL Single-AZ (t3.medium), Secrets Manager, Migration Lambda |
+| `RoomHop-Compute` | ECS Cluster, 2 Fargate tasks, internal ALB, 2 ECR repos |
+| `RoomHop-Auth` | Cognito User Pool + Client |
+| `RoomHop-Api` | HTTP API, VPC Link, JWT Authorizer, CORS (incl. Idempotency-Key) |
+| `RoomHop-Frontend` | S3 buckets (website + images), CloudFront, WAFv2 |
+| `RoomHop-Events` | EventBridge bus, 2 SQS queues + DLQs, 2 Lambda functions |
+| `RoomHop-Analytics` | Glue DB/Table, Athena workgroup, S3 results bucket |
+
+---
+
+## Key Architecture Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| No NAT Gateway | VPC Endpoints for all AWS service access — saves ~$32/month |
+| Private Isolated subnets only | Maximum security — no public subnets |
+| API Gateway + VPC Link | ALB has no public IP, traffic stays on AWS backbone |
+| ECS Fargate | No EC2 instances to manage, pay only when tasks run |
+| EventBridge + SQS | Replaces Kafka — fully serverless, no brokers |
+| Lambda for notifications/analytics | Event-driven, scales to zero |
+| Images in website bucket `/images/` | Single CloudFront origin, no separate images behavior needed |
+| `deletionProtection: false` | Easy teardown after testing |
+| `removalPolicy: DESTROY` on all resources | Clean destroy without orphaned resources |
+| Cognito auth opt-in via env vars | Local dev works without any AWS dependencies |
+
+---
+
+## Environment Variables Reference
+
+### Frontend Build (Vite)
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_API_URL` | API Gateway endpoint URL |
+| `VITE_IMAGES_URL` | `<CloudFrontUrl>/images` |
+| `VITE_COGNITO_USER_POOL_ID` | Cognito User Pool ID |
+| `VITE_COGNITO_CLIENT_ID` | Cognito App Client ID |
+| `VITE_AWS_REGION` | `us-east-1` |
+
+### ECS Services (auto-configured by CDK)
+
+| Variable | Value |
+|----------|-------|
+| `DB_SECRET_ARN` | Secrets Manager ARN for DB credentials |
+| `DB_NAME` | `hotel_db` |
+| `AWS_REGION` | `us-east-1` |
+| `NODE_ENV` | `production` |
 
 ---
 
@@ -267,43 +370,5 @@ Hotel_Management_system/
 - [ ] Add CI/CD pipeline (CodePipeline or GitHub Actions)
 - [ ] Add custom domain + ACM certificate
 - [ ] SES production access (exit sandbox)
-- [ ] Add Cognito hosted UI + social logins
+- [ ] Configure Cognito to use SES with custom domain (avoid spam)
 - [ ] Auto-scaling policies for ECS services
-
----
-
-## Environment Variables Reference
-
-### Search Service (ECS)
-
-| Variable | Value |
-|----------|-------|
-| `DB_SECRET_ARN` | From CDK output `DbSecretArn` |
-| `DB_NAME` | `hotel_db` |
-| `CDN_BASE_URL` | From CDK output `CloudFrontUrl` |
-| `AWS_REGION` | `us-east-1` |
-| `NODE_ENV` | `production` |
-| `SERVICE_NAME` | `search-service` |
-
-### Reservation Service (ECS)
-
-| Variable | Value |
-|----------|-------|
-| `DB_SECRET_ARN` | From CDK output `DbSecretArn` |
-| `DB_NAME` | `hotel_db` |
-| `EVENT_BUS_NAME` | `roomhop-events` |
-| `AWS_REGION` | `us-east-1` |
-| `NODE_ENV` | `production` |
-| `SERVICE_NAME` | `reservation-service` |
-
-### Notification Lambda
-
-| Variable | Value |
-|----------|-------|
-| `SENDER_EMAIL` | `noreply@roomhop.com` (must be SES-verified) |
-
-### Analytics Lambda
-
-| Variable | Value |
-|----------|-------|
-| `ANALYTICS_BUCKET` | From CDK output `AnalyticsBucketName` |

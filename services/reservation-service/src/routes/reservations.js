@@ -100,25 +100,40 @@ router.post('/', async (req, res) => {
 // GET /v1/reservations
 // -------------------------------------------------------
 router.get('/', async (req, res) => {
-  const { guest_id } = req.query;
+  const { guest_id, email } = req.query;
 
-  if (!guest_id) {
-    return res.status(400).json({ error: 'guest_id query parameter is required' });
+  if (!guest_id && !email) {
+    return res.status(400).json({ error: 'guest_id or email query parameter is required' });
   }
 
   try {
-    const [rows] = await db.query(
-      `SELECT r.*, h.name AS hotel_name, rt.name AS room_type_name
-         FROM reservation r
-         JOIN hotel     h  ON h.hotel_id      = r.hotel_id
-         JOIN room_type rt ON rt.room_type_id = r.room_type_id
-        WHERE r.guest_id = ?
-        ORDER BY r.created_at DESC`,
-      [guest_id]
-    );
+    let rows;
+    if (email) {
+      // Lookup by email (used when authenticated user fetches their own reservations)
+      [rows] = await db.query(
+        `SELECT r.*, h.name AS hotel_name, rt.name AS room_type_name
+           FROM reservation r
+           JOIN hotel     h  ON h.hotel_id      = r.hotel_id
+           JOIN room_type rt ON rt.room_type_id = r.room_type_id
+           JOIN guest     g  ON g.guest_id      = r.guest_id
+          WHERE g.email = ?
+          ORDER BY r.created_at DESC`,
+        [email]
+      );
+    } else {
+      [rows] = await db.query(
+        `SELECT r.*, h.name AS hotel_name, rt.name AS room_type_name
+           FROM reservation r
+           JOIN hotel     h  ON h.hotel_id      = r.hotel_id
+           JOIN room_type rt ON rt.room_type_id = r.room_type_id
+          WHERE r.guest_id = ?
+          ORDER BY r.created_at DESC`,
+        [guest_id]
+      );
+    }
     return res.status(200).json({ reservations: rows });
   } catch (err) {
-    logger.error('Guest reservations lookup failed', { error: err.message, guestId: guest_id });
+    logger.error('Guest reservations lookup failed', { error: err.message });
     return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });

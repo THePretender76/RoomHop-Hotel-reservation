@@ -21,6 +21,16 @@ DROP TABLE IF EXISTS Chambres_Type;
 DROP TABLE IF EXISTS Hotel_Images;
 DROP TABLE IF EXISTS Hotels;
 
+-- Drop current tables for clean re-creation
+DROP TABLE IF EXISTS reservation;
+DROP TABLE IF EXISTS room_type_inventory;
+DROP TABLE IF EXISTS room_type_rate;
+DROP TABLE IF EXISTS hotel_images;
+DROP TABLE IF EXISTS room;
+DROP TABLE IF EXISTS room_type;
+DROP TABLE IF EXISTS guest;
+DROP TABLE IF EXISTS hotel;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 CREATE TABLE hotel (
@@ -78,6 +88,9 @@ CREATE TABLE guest (
     first_name VARCHAR(100) NOT NULL,
     last_name  VARCHAR(100) NOT NULL,
     email      VARCHAR(255) NOT NULL UNIQUE,
+    phone      VARCHAR(30),
+    date_of_birth DATE,
+    nationality VARCHAR(60),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -210,9 +223,9 @@ async function sendResponse(event, status, reason) {
 exports.handler = async (event) => {
   console.log('Event:', JSON.stringify(event));
 
-  // Only run migration on CREATE (not UPDATE or DELETE)
-  if (event.RequestType !== 'Create') {
-    await sendResponse(event, 'SUCCESS', 'No migration needed for ' + event.RequestType);
+  // Only run migration on CREATE or UPDATE (not DELETE)
+  if (event.RequestType === 'Delete') {
+    await sendResponse(event, 'SUCCESS', 'No migration needed for Delete');
     return;
   }
 

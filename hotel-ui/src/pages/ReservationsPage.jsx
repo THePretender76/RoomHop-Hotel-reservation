@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { apiGet, apiDelete } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+import { isAuthEnabled } from '../auth/amplifyConfig';
 import styles from './ReservationsPage.module.css';
 
 export default function ReservationsPage() {
+  const { user } = useAuth();
+  const authEnabled = isAuthEnabled();
+  const userEmail = authEnabled && user?.attributes?.email ? user.attributes.email : null;
+
   const [guestId, setGuestId] = useState('');
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -13,16 +19,21 @@ export default function ReservationsPage() {
   const [searched, setSearched] = useState(false);
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'upcoming', 'past', 'cancelled'
 
-  async function handleLookup(e) {
-    e.preventDefault();
-    if (!guestId.trim()) return;
+  // Auto-fetch reservations when user is authenticated
+  useEffect(() => {
+    if (userEmail) {
+      fetchReservations({ email: userEmail });
+    }
+  }, [userEmail]);
+
+  async function fetchReservations(params) {
     setLoading(true);
     setError('');
     setSuccessMsg('');
     setReservations([]);
     setSearched(true);
     try {
-      const data = await apiGet('/v1/reservations', { guest_id: guestId });
+      const data = await apiGet('/v1/reservations', params);
       setReservations(data.reservations || []);
     } catch (err) {
       if (err.status === 404) setError('No reservations found.');
@@ -30,6 +41,12 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleLookup(e) {
+    e.preventDefault();
+    if (!guestId.trim()) return;
+    fetchReservations({ guest_id: guestId });
   }
 
   async function handleCancel(id) {
@@ -98,7 +115,8 @@ export default function ReservationsPage() {
           </div>
         </div>
 
-        {/* Search Bar — inline, modern */}
+        {/* Search Bar — only show when NOT authenticated */}
+        {!userEmail && (
         <form onSubmit={handleLookup} className={styles.searchBar}>
           <div className={styles.searchInputWrap}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.searchIcon}>
@@ -117,6 +135,7 @@ export default function ReservationsPage() {
             {loading ? <><span className={styles.spinner}></span>Searching</> : 'Find my trips'}
           </button>
         </form>
+        )}
 
         {/* Stats Bar */}
         {searched && reservations.length > 0 && (
@@ -243,8 +262,8 @@ export default function ReservationsPage() {
           </div>
         )}
 
-        {/* Pre-search state */}
-        {!searched && (
+        {/* Pre-search state — only for unauthenticated users */}
+        {!searched && !userEmail && (
           <div className={styles.emptyState}>
             <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className={styles.emptyIcon}>
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>

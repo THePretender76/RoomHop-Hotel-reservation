@@ -26,7 +26,20 @@ function isValidEmail(email) {
 export default function BookingPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { hotel, roomType, checkIn, checkOut, guests } = location.state || {};
+
+  // Restore booking state from sessionStorage if location.state is empty (after auth redirect)
+  const bookingState = location.state || (() => {
+    try {
+      const saved = sessionStorage.getItem('rh_pending_booking');
+      if (saved) {
+        sessionStorage.removeItem('rh_pending_booking');
+        return JSON.parse(saved);
+      }
+    } catch {}
+    return {};
+  })();
+
+  const { hotel, roomType, checkIn, checkOut, guests } = bookingState;
   const { loading, error, reservation, submit } = useBooking();
   const { user } = useAuth();
 

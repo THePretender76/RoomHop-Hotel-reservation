@@ -12,8 +12,12 @@ export default function PrivateRoute({ children }) {
   // Show nothing while checking auth
   if (loading) return <div style={{ padding: '100px', textAlign: 'center' }}>Loading...</div>;
 
-  // Redirect to sign-in with return path
+  // Redirect to sign-in with return path and preserve booking state
   if (!isAuthenticated) {
+    // Save booking state to sessionStorage so it survives the auth flow
+    if (location.state) {
+      sessionStorage.setItem('rh_pending_booking', JSON.stringify(location.state));
+    }
     return <Navigate to="/sign-in" state={{ from: location }} replace />;
   }
 

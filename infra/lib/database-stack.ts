@@ -48,8 +48,8 @@ export class DatabaseStack extends cdk.Stack {
         secretName: `${CONFIG.projectName}/rds/credentials`,
       }),
       backupRetention: cdk.Duration.days(7),
-      deletionProtection: true,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      deletionProtection: false,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
       publiclyAccessible: false,
       // Performance Insights for production observability
       enablePerformanceInsights: true,
@@ -108,7 +108,7 @@ export class DatabaseStack extends cdk.Stack {
       serviceToken: migrationProvider.serviceToken,
       properties: {
         // Change this value to force re-run of migration on next deploy
-        migrationVersion: '1',
+        migrationVersion: '4',
       },
     });
 

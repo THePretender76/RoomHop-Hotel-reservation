@@ -32,7 +32,8 @@ export class EventsStack extends cdk.Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       versioned: false,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
       lifecycleRules: [
         {
           // Move old analytics data to Glacier after 90 days
@@ -131,7 +132,7 @@ export class EventsStack extends cdk.Stack {
       securityGroups: [securityGroups.lambdaSg],
       environment: {
         AWS_REGION_OVERRIDE: CONFIG.region,
-        SENDER_EMAIL: 'noreply@roomhop.com',
+        SENDER_EMAIL: 'thenewpretender@gmail.com',
       },
       logRetention: logs.RetentionDays.ONE_MONTH,
     });

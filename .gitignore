@@ -4,6 +4,7 @@ node_modules/
 # Build output
 dist/
 build/
+infra/cdk.out/
 
 # Environment files
 .env

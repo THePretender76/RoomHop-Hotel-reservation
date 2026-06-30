@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import styles from './SignInPage.module.css';
@@ -8,6 +8,7 @@ export default function SignInPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/search';
+  const fromState = location.state?.from?.state || null;
 
   // Tab state: 'signin' or 'signup'
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'signin');
@@ -35,7 +36,7 @@ export default function SignInPage() {
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    navigate(from, { replace: true });
+    navigate(from, { replace: true, state: fromState });
     return null;
   }
 
@@ -46,7 +47,7 @@ export default function SignInPage() {
     try {
       const result = await login(signInEmail, signInPassword);
       if (result.isSignedIn) {
-        navigate(from, { replace: true });
+        navigate(from, { replace: true, state: fromState });
       } else if (result.nextStep?.signInStep === 'CONFIRM_SIGN_UP') {
         setConfirmEmail(signInEmail);
         setNeedsConfirmation(true);
@@ -86,7 +87,16 @@ export default function SignInPage() {
     setConfirmLoading(true);
     try {
       await confirmRegistration(confirmEmail, confirmCode);
-      // After confirmation, switch to sign in
+      // After confirmation, auto-sign-in and redirect
+      try {
+        const result = await login(confirmEmail, signUpPassword || signInPassword);
+        if (result.isSignedIn) {
+          navigate(from, { replace: true, state: fromState });
+          return;
+        }
+      } catch {
+        // Auto sign-in failed, fall back to manual sign-in
+      }
       setNeedsConfirmation(false);
       setActiveTab('signin');
       setSignInEmail(confirmEmail);
@@ -131,7 +141,7 @@ export default function SignInPage() {
 
           <p className={styles.switchText}>
             <button className={styles.switchLink} onClick={() => setNeedsConfirmation(false)}>
-              ← Back to Sign In
+              â† Back to Sign In
             </button>
           </p>
         </div>

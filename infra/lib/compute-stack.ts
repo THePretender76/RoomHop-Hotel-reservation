@@ -30,13 +30,15 @@ export class ComputeStack extends cdk.Stack {
     // ─── ECR Repositories ───────────────────────────────────────────────────────
     const searchRepo = new ecr.Repository(this, 'SearchServiceRepo', {
       repositoryName: `${CONFIG.projectName}/search-service`,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      emptyOnDelete: true,
       imageScanOnPush: true,
     });
 
     const reservationRepo = new ecr.Repository(this, 'ReservationServiceRepo', {
       repositoryName: `${CONFIG.projectName}/reservation-service`,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      emptyOnDelete: true,
       imageScanOnPush: true,
     });
 
@@ -84,6 +86,12 @@ export class ComputeStack extends cdk.Stack {
     });
     // Grant access to read DB secret at runtime
     dbSecret.grantRead(taskRole);
+    // Grant access to publish events to EventBridge
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['events:PutEvents'],
+      resources: [`arn:aws:events:${CONFIG.region}:*:event-bus/${CONFIG.projectName}-events`],
+    }));
 
     // ─── Common environment variables ───────────────────────────────────────────
     const commonEnv: { [key: string]: string } = {

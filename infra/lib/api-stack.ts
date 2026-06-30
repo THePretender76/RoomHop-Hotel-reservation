@@ -45,7 +45,7 @@ export class ApiStack extends cdk.Stack {
           apigatewayv2.CorsHttpMethod.DELETE,
           apigatewayv2.CorsHttpMethod.OPTIONS,
         ],
-        allowHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+        allowHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key'],
         maxAge: cdk.Duration.hours(1),
       },
     });

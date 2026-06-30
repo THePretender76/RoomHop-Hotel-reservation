@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Footer from '../components/Footer';
 import { IMAGES_BASE } from '../config';
 import styles from './HomePage.module.css';
 
@@ -321,9 +320,6 @@ export default function HomePage() {
           />
         </div>
       </section>
-
-      {/* Footer */}
-      <Footer />
 
       {/* Lightbox */}
       {showLightbox && (

@@ -25,16 +25,18 @@ export class FrontendStack extends cdk.Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       versioned: true,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
     });
 
-    // Hotel images bucket
+    // Hotel images bucket (unused in iteration 1 — images go to website bucket /images/ path)
     const imagesBucket = new s3.Bucket(this, 'ImagesBucket', {
       bucketName: `${CONFIG.s3.imagesBucket}-${cdk.Aws.ACCOUNT_ID}`,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       versioned: false,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
       cors: [
         {
           allowedHeaders: ['*'],
