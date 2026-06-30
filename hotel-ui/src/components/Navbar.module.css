@@ -172,6 +172,23 @@
   transform: translateY(-1px);
 }
 
+.userName {
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobileUserName {
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 4px 0;
+}
+
 .mobileAuthButtons {
   display: flex;
   gap: 10px;

@@ -151,66 +151,6 @@
     "aws:cdk:path": "RoomHop-Frontend/ImagesBucket/Resource"
    }
   },
-  "ImagesBucketPolicy5ED12B6C": {
-   "Type": "AWS::S3::BucketPolicy",
-   "Properties": {
-    "Bucket": {
-     "Ref": "ImagesBucket1E86AFB2"
-    },
-    "PolicyDocument": {
-     "Statement": [
-      {
-       "Action": "s3:GetObject",
-       "Condition": {
-        "StringEquals": {
-         "AWS:SourceArn": {
-          "Fn::Join": [
-           "",
-           [
-            "arn:",
-            {
-             "Ref": "AWS::Partition"
-            },
-            ":cloudfront::",
-            {
-             "Ref": "AWS::AccountId"
-            },
-            ":distribution/",
-            {
-             "Ref": "RoomHopDistribution8AE34900"
-            }
-           ]
-          ]
-         }
-        }
-       },
-       "Effect": "Allow",
-       "Principal": {
-        "Service": "cloudfront.amazonaws.com"
-       },
-       "Resource": {
-        "Fn::Join": [
-         "",
-         [
-          {
-           "Fn::GetAtt": [
-            "ImagesBucket1E86AFB2",
-            "Arn"
-           ]
-          },
-          "/*"
-         ]
-        ]
-       }
-      }
-     ],
-     "Version": "2012-10-17"
-    }
-   },
-   "Metadata": {
-    "aws:cdk:path": "RoomHop-Frontend/ImagesBucket/Policy/Resource"
-   }
-  },
   "CloudFrontWaf": {
    "Type": "AWS::WAFv2::WebACL",
    "Properties": {
@@ -317,36 +257,11 @@
     "aws:cdk:path": "RoomHop-Frontend/RoomHopDistribution/Origin1/S3OriginAccessControl/Resource"
    }
   },
-  "RoomHopDistributionOrigin2S3OriginAccessControl564596A6": {
-   "Type": "AWS::CloudFront::OriginAccessControl",
-   "Properties": {
-    "OriginAccessControlConfig": {
-     "Name": "RoomHopFrontendRoomHopDistriOrigin2S3OriginAccessControl37CB400E",
-     "OriginAccessControlOriginType": "s3",
-     "SigningBehavior": "always",
-     "SigningProtocol": "sigv4"
-    }
-   },
-   "Metadata": {
-    "aws:cdk:path": "RoomHop-Frontend/RoomHopDistribution/Origin2/S3OriginAccessControl/Resource"
-   }
-  },
   "RoomHopDistribution8AE34900": {
    "Type": "AWS::CloudFront::Distribution",
    "Properties": {
     "DistributionConfig": {
      "CacheBehaviors": [
-      {
-       "AllowedMethods": [
-        "GET",
-        "HEAD"
-       ],
-       "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
-       "Compress": true,
-       "PathPattern": "/images/*",
-       "TargetOriginId": "RoomHopFrontendRoomHopDistributionOrigin20BF80B06",
-       "ViewerProtocolPolicy": "redirect-to-https"
-      },
       {
        "AllowedMethods": [
         "GET",
@@ -361,7 +276,7 @@
        "Compress": true,
        "OriginRequestPolicyId": "b689b0a8-53d0-40ab-baf2-68738e2966ac",
        "PathPattern": "/api/*",
-       "TargetOriginId": "RoomHopFrontendRoomHopDistributionOrigin34E1F4FD1",
+       "TargetOriginId": "RoomHopFrontendRoomHopDistributionOrigin20BF80B06",
        "ViewerProtocolPolicy": "redirect-to-https"
       }
      ],
@@ -414,24 +329,6 @@
        }
       },
       {
-       "DomainName": {
-        "Fn::GetAtt": [
-         "ImagesBucket1E86AFB2",
-         "RegionalDomainName"
-        ]
-       },
-       "Id": "RoomHopFrontendRoomHopDistributionOrigin20BF80B06",
-       "OriginAccessControlId": {
-        "Fn::GetAtt": [
-         "RoomHopDistributionOrigin2S3OriginAccessControl564596A6",
-         "Id"
-        ]
-       },
-       "S3OriginConfig": {
-        "OriginAccessIdentity": ""
-       }
-      },
-      {
        "CustomOriginConfig": {
         "OriginProtocolPolicy": "https-only",
         "OriginSSLProtocols": [
@@ -451,7 +348,7 @@
          }
         ]
        },
-       "Id": "RoomHopFrontendRoomHopDistributionOrigin34E1F4FD1"
+       "Id": "RoomHopFrontendRoomHopDistributionOrigin20BF80B06"
       }
      ],
      "PriceClass": "PriceClass_100",

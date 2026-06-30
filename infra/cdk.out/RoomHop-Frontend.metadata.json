@@ -30,7 +30,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:190:5)",
+        "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:183:5)",
         "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -44,7 +44,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:195:5)",
+        "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:188:5)",
         "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -58,7 +58,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:200:5)",
+        "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:193:5)",
         "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -72,7 +72,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:205:5)",
+        "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:198:5)",
         "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -176,19 +176,6 @@
       ]
     }
   ],
-  "/RoomHop-Frontend/ImagesBucket/Policy/Resource": [
-    {
-      "type": "aws:cdk:logicalId",
-      "data": "ImagesBucketPolicy5ED12B6C"
-    },
-    {
-      "type": "aws:cdk:creationStack",
-      "data": [
-        "...aws-cdk-lib...",
-        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
-      ]
-    }
-  ],
   "/RoomHop-Frontend/RoomHopDistribution/Origin1/S3OriginAccessControl/Resource": [
     {
       "type": "aws:cdk:logicalId",
@@ -201,20 +188,6 @@
         "new FrontendStack (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\lib\\frontend-stack.ts:134:26)",
         "<anonymous> (C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\bin\\app.ts:55:23)",
         "...node internals..."
-      ]
-    }
-  ],
-  "/RoomHop-Frontend/RoomHopDistribution/Origin2/S3OriginAccessControl/Resource": [
-    {
-      "type": "aws:cdk:logicalId",
-      "data": "RoomHopDistributionOrigin2S3OriginAccessControl564596A6"
-    },
-    {
-      "type": "aws:cdk:creationStack",
-      "data": [
-        "...C:\\AWS\\HandsOn\\Hotel_Management_system\\infra\\node_modules\\aws-cdk-lib\\aws-cloudfront\\lib\\distribution.js:1:148 in aws-cdk-lib...",
-        "Array.forEach (:)",
-        "...aws-cdk-lib..."
       ]
     }
   ]

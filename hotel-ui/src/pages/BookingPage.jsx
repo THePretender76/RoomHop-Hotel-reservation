@@ -1,6 +1,8 @@
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useBooking } from '../hooks/useBooking';
+import { useAuth } from '../auth/AuthContext';
+import { isAuthEnabled } from '../auth/amplifyConfig';
 import { IMAGES_BASE } from '../config';
 import styles from './BookingPage.module.css';
 
@@ -26,6 +28,7 @@ export default function BookingPage() {
   const navigate = useNavigate();
   const { hotel, roomType, checkIn, checkOut, guests } = location.state || {};
   const { loading, error, reservation, submit } = useBooking();
+  const { user } = useAuth();
 
   // Redirect if accessed directly without state
   useEffect(() => {
@@ -34,10 +37,11 @@ export default function BookingPage() {
     }
   }, [hotel, roomType, navigate]);
 
-  // Guest form state
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
+  // Guest form state — pre-fill from Cognito attributes when auth is enabled
+  const cognitoAttrs = isAuthEnabled() && user?.attributes ? user.attributes : null;
+  const [firstName, setFirstName] = useState(cognitoAttrs?.given_name || '');
+  const [lastName, setLastName] = useState(cognitoAttrs?.family_name || '');
+  const [email, setEmail] = useState(cognitoAttrs?.email || '');
   const [phone, setPhone] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [nationality, setNationality] = useState('');

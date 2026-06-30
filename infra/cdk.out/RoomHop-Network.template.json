@@ -426,6 +426,42 @@
     "aws:cdk:path": "RoomHop-Network/RoomHopVpc/SesEndpoint/Resource"
    }
   },
+  "RoomHopVpcSsmMessagesEndpoint61C44E17": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "EndpointSg9223A863",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": "com.amazonaws.us-east-1.ssmmessages",
+    "SubnetIds": [
+     {
+      "Ref": "RoomHopVpcPrivateSubnet1SubnetF4CFC437"
+     },
+     {
+      "Ref": "RoomHopVpcPrivateSubnet2Subnet2E0B0C6F"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "RoomHop-Network/RoomHopVpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "RoomHopVpc32D1FA7F"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "RoomHop-Network/RoomHopVpc/SsmMessagesEndpoint/Resource"
+   }
+  },
   "EndpointSg9223A863": {
    "Type": "AWS::EC2::SecurityGroup",
    "Properties": {

@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { IMAGES_BASE } from '../config';
+import { useAuth } from '../auth/AuthContext';
+import { isAuthEnabled } from '../auth/amplifyConfig';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -19,6 +23,17 @@ export default function Navbar() {
   }, [location]);
 
   const isHome = location.pathname === '/';
+  const authEnabled = isAuthEnabled();
+
+  const handleSignOut = async () => {
+    await logout();
+    navigate('/');
+  };
+
+  // Display name from Cognito attributes
+  const displayName = user?.attributes
+    ? `${user.attributes.given_name || ''} ${user.attributes.family_name || ''}`.trim() || user.attributes.email
+    : '';
 
   return (
     <header className={`${styles.header} ${scrolled ? styles.scrolled : ''}`}>
@@ -42,8 +57,26 @@ export default function Navbar() {
         </div>
 
         <div className={styles.authButtons}>
-          <button className={styles.authBtnOutline}>Sign up</button>
-          <button className={styles.authBtnSolid}>Sign in</button>
+          {authEnabled && isAuthenticated ? (
+            <>
+              <span className={styles.userName}>{displayName}</span>
+              <button className={styles.authBtnOutline} onClick={handleSignOut}>Sign out</button>
+            </>
+          ) : authEnabled ? (
+            <>
+              <Link to="/sign-in" state={{ tab: 'signup' }}>
+                <button className={styles.authBtnOutline}>Sign up</button>
+              </Link>
+              <Link to="/sign-in" state={{ tab: 'signin' }}>
+                <button className={styles.authBtnSolid}>Sign in</button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <button className={styles.authBtnOutline}>Sign up</button>
+              <button className={styles.authBtnSolid}>Sign in</button>
+            </>
+          )}
         </div>
 
         <button
@@ -70,8 +103,26 @@ export default function Navbar() {
         <Link to="/search" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>Search</Link>
         <Link to="/reservations" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>My Reservations</Link>
         <div className={styles.mobileAuthButtons}>
-          <button className={styles.authBtnOutline}>Sign up</button>
-          <button className={styles.authBtnSolid}>Sign in</button>
+          {authEnabled && isAuthenticated ? (
+            <>
+              <span className={styles.mobileUserName}>{displayName}</span>
+              <button className={styles.authBtnOutline} onClick={handleSignOut}>Sign out</button>
+            </>
+          ) : authEnabled ? (
+            <>
+              <Link to="/sign-in" state={{ tab: 'signup' }} onClick={() => setMenuOpen(false)}>
+                <button className={styles.authBtnOutline}>Sign up</button>
+              </Link>
+              <Link to="/sign-in" state={{ tab: 'signin' }} onClick={() => setMenuOpen(false)}>
+                <button className={styles.authBtnSolid}>Sign in</button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <button className={styles.authBtnOutline}>Sign up</button>
+              <button className={styles.authBtnSolid}>Sign in</button>
+            </>
+          )}
         </div>
       </div>
     </header>

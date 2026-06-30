@@ -1,16 +1,16 @@
 {
   "version": "54.0.0",
   "files": {
-    "51bba972b6710a8da8fc0a4a35b6a38df4874307aafb0cfc2a11d0f27ff1bd10": {
+    "94166a093aaf772dd02f9db0f60750e63e6947b6e3aeda5d50b2a43821899e09": {
       "displayName": "RoomHop-Frontend Template",
       "source": {
         "path": "RoomHop-Frontend.template.json",
         "packaging": "file"
       },
       "destinations": {
-        "370314719865-us-east-1-f2430ce4": {
+        "370314719865-us-east-1-bdf1721c": {
           "bucketName": "cdk-hnb659fds-assets-370314719865-us-east-1",
-          "objectKey": "51bba972b6710a8da8fc0a4a35b6a38df4874307aafb0cfc2a11d0f27ff1bd10.json",
+          "objectKey": "94166a093aaf772dd02f9db0f60750e63e6947b6e3aeda5d50b2a43821899e09.json",
           "region": "us-east-1",
           "assumeRoleArn": "arn:${AWS::Partition}:iam::370314719865:role/cdk-hnb659fds-file-publishing-role-370314719865-us-east-1"
         }
