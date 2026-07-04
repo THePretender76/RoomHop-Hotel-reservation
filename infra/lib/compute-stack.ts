@@ -6,6 +6,7 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as xray from 'aws-cdk-lib/aws-xray';
 import { Construct } from 'constructs';
 import { CONFIG } from './config';
 import { SecurityGroups } from './network-stack';
@@ -93,6 +94,29 @@ export class ComputeStack extends cdk.Stack {
       resources: [`arn:aws:events:${CONFIG.region}:*:event-bus/${CONFIG.projectName}-events`],
     }));
 
+    // Grant X-Ray write access so the X-Ray daemon sidecar can send traces
+    taskRole.addManagedPolicy(
+      iam.ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess')
+    );
+
+    // ─── X-Ray Sampling Rule ────────────────────────────────────────────────────
+    // Sample 10% of requests in production to control cost
+    new xray.CfnSamplingRule(this, 'XRaySamplingRule', {
+      samplingRule: {
+        ruleName: `${CONFIG.projectName}-sampling`,
+        priority: 1000,
+        reservoirSize: 1,   // 1 request/second always traced
+        fixedRate: 0.1,     // 10% of remaining requests
+        host: '*',
+        httpMethod: '*',
+        resourceArn: '*',
+        serviceName: `${CONFIG.projectName}*`,
+        serviceType: '*',
+        urlPath: '*',
+        version: 1,
+      },
+    });
+
     // ─── Common environment variables ───────────────────────────────────────────
     const commonEnv: { [key: string]: string } = {
       DB_SECRET_ARN: dbSecret.secretArn,
@@ -139,6 +163,20 @@ export class ComputeStack extends cdk.Stack {
         },
       });
 
+      // ─── X-Ray Daemon Sidecar ──────────────────────────────────────────────────
+      // Runs alongside the app container, collects traces and sends to X-Ray
+      taskDefinition.addContainer(`${serviceName}XRayDaemon`, {
+        image: ecs.ContainerImage.fromRegistry('public.ecr.aws/xray/aws-xray-daemon:latest'),
+        essential: false,
+        portMappings: [{ containerPort: 2000, protocol: ecs.Protocol.UDP }],
+        logging: ecs.LogDrivers.awsLogs({
+          streamPrefix: `${serviceName}-xray`,
+          logGroup,
+        }),
+        cpu: 32,
+        memoryReservationMiB: 256,
+      });
+
       const service = new ecs.FargateService(this, `${serviceName}Service`, {
         cluster,
         taskDefinition,
@@ -147,6 +185,22 @@ export class ComputeStack extends cdk.Stack {
         vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
         assignPublicIp: false,
         serviceName: `${CONFIG.projectName}-${serviceName}`,
+      });
+
+      // ─── Auto Scaling ─────────────────────────────────────────────────────────
+      const scaling = service.autoScaleTaskCount({
+        minCapacity: 1,
+        maxCapacity: 4,
+      });
+      scaling.scaleOnCpuUtilization(`${serviceName}CpuScaling`, {
+        targetUtilizationPercent: 60,
+        scaleInCooldown: cdk.Duration.seconds(60),
+        scaleOutCooldown: cdk.Duration.seconds(30),
+      });
+      scaling.scaleOnMemoryUtilization(`${serviceName}MemoryScaling`, {
+        targetUtilizationPercent: 70,
+        scaleInCooldown: cdk.Duration.seconds(60),
+        scaleOutCooldown: cdk.Duration.seconds(30),
       });
 
       // Target group for ALB path-based routing

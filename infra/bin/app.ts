@@ -10,6 +10,7 @@ import { ApiStack } from '../lib/api-stack';
 import { FrontendStack } from '../lib/frontend-stack';
 import { EventsStack } from '../lib/events-stack';
 import { AnalyticsStack } from '../lib/analytics-stack';
+import { ObservabilityStack } from '../lib/observability-stack';
 
 const app = new cdk.App();
 
@@ -69,5 +70,8 @@ const analyticsStack = new AnalyticsStack(app, 'RoomHop-Analytics', {
   env,
   analyticsBucket: eventsStack.analyticsBucket,
 });
+
+// Stack 10: Observability (CloudTrail, IAM Access Analyzer)
+new ObservabilityStack(app, 'RoomHop-Observability', { env });
 
 app.synth();
