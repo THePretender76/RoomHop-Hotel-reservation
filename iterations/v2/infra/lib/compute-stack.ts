@@ -21,6 +21,7 @@ export interface ComputeStackProps extends cdk.StackProps {
 export class ComputeStack extends cdk.Stack {
   public readonly alb: elbv2.ApplicationLoadBalancer;
   public readonly albListener: elbv2.ApplicationListener;
+  public readonly cluster: ecs.Cluster;
 
   constructor(scope: Construct, id: string, props: ComputeStackProps) {
     super(scope, id, props);
@@ -43,7 +44,7 @@ export class ComputeStack extends cdk.Stack {
     });
 
     // ─── ECS Cluster ────────────────────────────────────────────────────────────
-    const cluster = new ecs.Cluster(this, 'RoomHopCluster', {
+    this.cluster = new ecs.Cluster(this, 'RoomHopCluster', {
       vpc,
       clusterName: `${CONFIG.projectName}-cluster`,
       containerInsights: true,
@@ -140,7 +141,7 @@ export class ComputeStack extends cdk.Stack {
       });
 
       const service = new ecs.FargateService(this, `${serviceName}Service`, {
-        cluster,
+        cluster: this.cluster,
         taskDefinition,
         desiredCount: serviceConfig.desiredCount,
         securityGroups: [securityGroups.ecsSg],
@@ -186,7 +187,7 @@ export class ComputeStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'ClusterName', {
-      value: cluster.clusterName,
+      value: this.cluster.clusterName,
       description: 'ECS cluster name',
     });
   }

@@ -12,6 +12,7 @@ export interface FrontendStackProps extends cdk.StackProps {
 
 export class FrontendStack extends cdk.Stack {
   public readonly cloudFrontUrl: string;
+  public readonly wafAclArn: string;
 
   constructor(scope: Construct, id: string, props: FrontendStackProps) {
     super(scope, id, props);
@@ -180,6 +181,7 @@ export class FrontendStack extends cdk.Stack {
     });
 
     this.cloudFrontUrl = `https://${distribution.distributionDomainName}`;
+    this.wafAclArn = webAcl.attrArn;
 
     // ─── Outputs ────────────────────────────────────────────────────────────────
     new cdk.CfnOutput(this, 'CloudFrontUrl', {

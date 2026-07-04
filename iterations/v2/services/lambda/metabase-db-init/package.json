@@ -1,0 +1,9 @@
+{
+  "name": "metabase-db-init",
+  "version": "1.0.0",
+  "description": "Lambda to provision metabase_db and metabase_user in RDS",
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.600.0",
+    "mysql2": "^3.22.5"
+  }
+}

@@ -11,6 +11,8 @@ export interface AnalyticsStackProps extends cdk.StackProps {
 
 export class AnalyticsStack extends cdk.Stack {
   public readonly athenaWorkgroup: athena.CfnWorkGroup;
+  public readonly athenaResultsBucketName: string;
+  public readonly glueDatabaseName: string;
 
   constructor(scope: Construct, id: string, props: AnalyticsStackProps) {
     super(scope, id, props);
@@ -25,14 +27,12 @@ export class AnalyticsStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       lifecycleRules: [
-        {
-          // Auto-delete query results after 30 days
-          expiration: cdk.Duration.days(30),
-        },
+        { expiration: cdk.Duration.days(30) },
       ],
     });
 
-    // ─── Athena Workgroup ───────────────────────────────────────────────────────
+    this.athenaResultsBucketName = athenaResultsBucket.bucketName;
+
     this.athenaWorkgroup = new athena.CfnWorkGroup(this, 'RoomHopWorkgroup', {
       name: `${CONFIG.projectName}-analytics`,
       description: 'RoomHop analytics workgroup for reservation data queries',
@@ -61,6 +61,8 @@ export class AnalyticsStack extends cdk.Stack {
         description: 'RoomHop analytics database for reservation event data',
       },
     });
+
+    this.glueDatabaseName = `${CONFIG.projectName}_analytics`;
 
     // ─── Glue Table: Reservations ───────────────────────────────────────────────
     // Points to S3 analytics bucket with Hive-style partitioning (year/month/day).
