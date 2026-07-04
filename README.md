@@ -1,54 +1,146 @@
 # RoomHop — Hotel Booking Platform
 
-RoomHop is a next-generation hotel booking platform designed for modern travelers. It provides a curated hotel discovery experience with date-based availability search, a streamlined reservation engine, and async email notifications — all without payment processing. Reservations are confirmed instantly upon successful availability check.
+RoomHop is a hotel booking platform built as a hands-on learning project. It started as a fully local Docker-based stack and was progressively industrialized into a production-grade AWS cloud deployment using Infrastructure as Code (CDK).
 
-## Architecture
+---
+
+## Project Journey
+
+### Phase 1 — Local Development (Docker)
+
+The platform was first built and validated entirely on a local machine using Docker Compose. This phase focused on understanding the application architecture, service interactions, and data flows before touching any cloud infrastructure.
 
 ```
 Browser (React SPA)  →  KrakenD Gateway (port 8080)  →  Booking API (port 3000)  →  MySQL
                                                       ↓
                                                     Kafka  →  Notification Service
-                                                      
+
 Hotel images served from MinIO (S3-compatible, port 9000)
 ```
 
 | Service | Location | Port | Tech |
 |---------|----------|------|------|
-| React SPA | `hotel-ui/` | 5173 (dev) | Vite + React + React Router |
+| React SPA | `hotel-ui/` | 5173 | Vite + React + React Router |
 | Booking API | `hotel-api/` | 3000 | Node.js + Express + mysql2 |
-| Notification Service | `notification-service/` | — (consumer) | Node.js + KafkaJS |
-| Analytics Service | `analytics-service/` | — (consumer) | Node.js + KafkaJS + Parquet |
+| Notification Service | `notification-service/` | — | Node.js + KafkaJS |
+| Analytics Service | `analytics-service/` | — | Node.js + KafkaJS + Parquet |
 | API Gateway | `krakend.json` | 8080 | KrakenD |
 | Database | Docker | 3306 | MySQL 8.0 |
 | Message Broker | Docker | 9022 | Apache Kafka (KRaft) |
 | Object Storage | Docker | 9000 | MinIO |
-| BI Dashboards | Docker | 3001 | Metabase (connects to MySQL) |
+| BI Dashboards | Docker | 3001 | Metabase |
+
+### Phase 2 — AWS Industrialization (CDK)
+
+Once the application was validated locally, the entire stack was re-architected and deployed to AWS using CDK v2 (TypeScript). Local Docker services were replaced with managed AWS equivalents:
+
+| Local | AWS Equivalent |
+|-------|---------------|
+| KrakenD API Gateway | Amazon API Gateway HTTP API |
+| MySQL (Docker) | Amazon RDS MySQL 8.0 |
+| Kafka (Docker) | Amazon EventBridge + SQS |
+| MinIO (Docker) | Amazon S3 + CloudFront |
+| Node.js processes | ECS Fargate containers |
+| Notification Service | AWS Lambda + SES |
+| Analytics Service | AWS Lambda + S3 + Athena |
+| Manual auth | Amazon Cognito |
+
+The AWS deployment lives in `infra/` and follows the AWS Well-Architected Framework across all 6 pillars.
+
+---
+
+## AWS Architecture
+
+```
+Browser
+  ├── Cognito (JWT Authentication)
+  └── CloudFront (WAF) → S3 (React SPA + images)
+           │
+           │ HTTPS + JWT
+           ▼
+  API Gateway HTTP API (JWT Authorizer)
+           │
+           │ VPC Link (private)
+           ▼
+  ┌─────────────────────────────────────────────────────┐
+  │  VPC — Private Isolated Subnets (no NAT Gateway)    │
+  │                                                      │
+  │  Internal ALB                                        │
+  │    /v1/search*       → Search Service (ECS Fargate)  │
+  │    /v1/reservations* → Reservation Service (Fargate) │
+  │         │  Auto Scaling (min 1 / max 4 tasks)        │
+  │         │  X-Ray Daemon sidecar                      │
+  │         ▼                                            │
+  │    RDS MySQL 8.0 (Secrets Manager)                   │
+  │         │                                            │
+  │         ▼ (via VPC Endpoint)                         │
+  │    EventBridge → SQS Notification → Lambda → SES    │
+  │                → SQS Analytics    → Lambda → S3     │
+  │                                                      │
+  │  VPC Interface Endpoints (no traffic leaves AWS)     │
+  └─────────────────────────────────────────────────────┘
+           │
+           ▼
+  S3 Analytics Bucket → Athena (Glue catalog)
+  CloudTrail → S3 + CloudWatch Logs
+  IAM Access Analyzer (account-wide)
+```
+
+### CDK Stacks
+
+| Stack | What it deploys |
+|-------|----------------|
+| `RoomHop-Network` | VPC, private subnets, 8 VPC Interface Endpoints, security groups |
+| `RoomHop-Database` | RDS MySQL t3.medium, Secrets Manager, migration Lambda |
+| `RoomHop-Compute` | ECS Fargate (2 services), internal ALB, ECR repos, Auto Scaling, X-Ray |
+| `RoomHop-Auth` | Cognito User Pool + App Client |
+| `RoomHop-Api` | API Gateway HTTP API, VPC Link, JWT Authorizer |
+| `RoomHop-Frontend` | S3 (website + images), CloudFront, WAFv2 (rate limit, SQLi, XSS) |
+| `RoomHop-Events` | EventBridge bus, SQS queues + DLQs, notification Lambda, analytics Lambda |
+| `RoomHop-Analytics` | Glue database + table, Athena workgroup, S3 results bucket |
+| `RoomHop-Observability` | CloudTrail, IAM Access Analyzer |
+
+### Key Architecture Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| No NAT Gateway | VPC Endpoints for all AWS service access — saves ~$32/month |
+| Private isolated subnets only | Maximum network isolation — no public subnets |
+| API Gateway + VPC Link | ALB has no public IP, traffic stays on AWS backbone |
+| ECS Fargate | No EC2 to manage, pay only when tasks run |
+| EventBridge + SQS | Replaces Kafka — fully serverless, no brokers to manage |
+| Auto Scaling on ECS | min 1 / max 4 tasks, scales on CPU (60%) and memory (70%) |
+| X-Ray tracing | Daemon sidecar on every Fargate task, 10% sampling rate |
+| CloudTrail | Full audit log of all API calls across the account |
+| IAM Access Analyzer | Continuously flags overly permissive resource policies |
+
+---
 
 ## Features
 
 - **Hotel Search** — Search by city, dates, guests, price range, and amenities
-- **Grouped Results** — Hotels displayed with hero images, room types listed per hotel
+- **Grouped Results** — Hotels with hero images, room types listed per hotel
 - **Room Type Filtering** — Filter by amenities (WiFi, Pool, City View, etc.)
 - **Full Booking Flow** — Select room → fill guest details → view price breakdown → confirm
 - **Reservation Management** — View upcoming/past/cancelled trips, cancel with 3-day policy
-- **Async Notifications** — Kafka-powered confirmation and cancellation events
+- **Async Notifications** — Email confirmations and cancellations via SES
 - **Responsive Design** — Mobile-first with modern silver/teal UI
 
-## Prerequisites
+---
 
-- **Node.js** 18+ (for the API and notification service)
-- **Docker Desktop** (for MySQL, Kafka, MinIO, KrakenD)
-- **npm** (comes with Node.js)
+## Running Locally (Phase 1)
 
-## Quick Start
+### Prerequisites
+
+- Node.js 18+
+- Docker Desktop
+- npm
 
 ### 1. Start Docker infrastructure
 
 ```bash
 docker-compose up -d
 ```
-
-This starts MySQL, Kafka, MinIO, KrakenD, Redis, OpenSearch, and admin UIs.
 
 Wait ~15 seconds for all services to be healthy.
 
@@ -61,327 +153,116 @@ docker exec hotel-kafka /opt/kafka/bin/kafka-topics.sh --create --topic hotel.ev
 ### 3. Run database migrations
 
 ```bash
-# On Windows (PowerShell):
+# Windows (PowerShell)
 Get-Content database/migration_v2.sql -Raw | docker exec -i hotel-mysql mysql -u root -prootpassword hotel_db
 Get-Content database/seed_v2.sql -Raw | docker exec -i hotel-mysql mysql -u root -prootpassword hotel_db
 
-# On Mac/Linux:
+# Mac/Linux
 docker exec -i hotel-mysql mysql -u root -prootpassword hotel_db < database/migration_v2.sql
 docker exec -i hotel-mysql mysql -u root -prootpassword hotel_db < database/seed_v2.sql
 ```
 
-### 4. Install dependencies
+### 4. Install dependencies and start services
 
 ```bash
-# API
-cd hotel-api
-npm install
-
-# Notification Service
-cd ../notification-service
-npm install
-
-# Frontend
-cd ../hotel-ui
-npm install
+cd hotel-api && npm install && node src/app.js
+cd ../notification-service && npm install && node src/consumer.js
+cd ../hotel-ui && npm install && npm run dev
 ```
 
-### 5. Start the Booking API
+Open **http://localhost:5173** in your browser.
 
-```bash
-cd hotel-api
-node src/app.js
-```
-
-You should see:
-```
-🚀 Hotel API running on port 3000
-[kafkaProducer] Connected to Kafka broker at localhost:9022
-```
-
-### 6. Start the Notification Service
-
-Open a new terminal:
-```bash
-cd notification-service
-node src/consumer.js
-```
-
-You should see it join the Kafka consumer group.
-
-### 7. Start the Frontend
-
-Open a new terminal:
-```bash
-cd hotel-ui
-npm run dev
-```
-
-You should see:
-```
-➜  Local:   http://localhost:5173/
-```
-
-### 8. Open the website
-
-Go to **http://localhost:5173/** in your browser.
-
-## Usage
-
-1. **Home page** — Browse the landing page, then use the search form to find hotels
-2. **Search** — Enter city (e.g. "Paris"), dates, and number of rooms needed → click "Search hotels"
-3. **Results** — View grouped hotel results, filter by amenities, click "Reserve" on a room type
-4. **Booking** — Fill guest details (name, email, phone, DOB) → confirm booking
-5. **My Reservations** — Click "My Reservations" in navbar → enter Guest ID → view/cancel trips
-
-## Admin UIs
+### Local Admin UIs
 
 | Tool | URL | Purpose |
 |------|-----|---------|
 | Adminer (MySQL) | http://localhost:8081 | Database management |
 | AKHQ (Kafka) | http://localhost:8082 | Kafka topics & messages |
-| MinIO Console | http://localhost:9001 | Object storage (images) |
+| MinIO Console | http://localhost:9001 | Object storage |
+| Metabase | http://localhost:3001 | BI dashboards |
 
-**MinIO credentials:** `minioadmin` / `miniopassword`
+---
 
-## Hotel Images in MinIO
+## Deploying to AWS (Phase 2)
 
-Hotel and room type images are stored in the `hotels` bucket in MinIO:
-- Hotel images: `hotels/<filename>.png` (e.g. `hotel_beaux_arts.png`)
-- Room type images: `hotels/room_type/room_type_<id>.png`
-- Placeholder images: `hotels/placeholder_image/<name>.jpg`
+See [`infra/README.md`](infra/README.md) for the full step-by-step AWS deployment guide including:
+- CDK bootstrap and stack deployment order
+- Docker image build and ECR push
+- React frontend build and S3 upload
+- SES email verification
+- Teardown instructions
 
-Upload images via MinIO Console at http://localhost:9001.
+### Quick deploy summary
+
+```bash
+cd infra
+npm install
+npx cdk bootstrap aws://YOUR_ACCOUNT_ID/us-east-1
+npx cdk deploy --all --require-approval never
+```
+
+---
 
 ## Running Tests
 
 ```bash
 # API property tests
-cd hotel-api
-npm test
+cd hotel-api && npm test
 
 # Notification service tests
-cd notification-service
-npm test
+cd notification-service && npm test
 
 # Frontend tests
-cd hotel-ui
-npm run test
+cd hotel-ui && npm run test
 ```
+
+---
 
 ## Project Structure
 
 ```
 Hotel_Management_system/
 ├── hotel-api/              # Express.js Booking API
-│   ├── src/
-│   │   ├── app.js          # Express app entry point
-│   │   ├── db.js           # MySQL connection pool
-│   │   ├── routes/v1/      # API routes (search, reservations)
-│   │   ├── services/       # Business logic (reservation, kafka)
-│   │   └── middleware/     # Request validation
-│   └── __tests__/          # Property-based tests (fast-check)
-├── hotel-ui/               # React SPA
-│   └── src/
-│       ├── pages/          # HomePage, SearchResultsPage, BookingPage, ReservationsPage
-│       ├── components/     # Navbar, Footer, HotelCard, SkeletonCard, etc.
-│       ├── hooks/          # useSearch, useBooking
-│       └── api/            # API client (fetch wrapper)
-├── notification-service/   # Kafka consumer for email notifications
-├── analytics-service/      # BI & Analytics — Kafka to Parquet pipeline
-│   └── src/
-│       ├── consumer.js     # Kafka consumer entry point
-│       ├── config.js       # Environment-based configuration
-│       ├── logger.js       # Winston structured logger
-│       ├── writers/        # Parquet file writers
-│       ├── transformers/   # Event routing and transformation
-│       └── storage/        # MinIO S3 client
+├── hotel-ui/               # React SPA (Vite)
+├── notification-service/   # Kafka/SQS consumer — email notifications
+├── analytics-service/      # Kafka consumer — Parquet archival (local)
+├── services/               # AWS Lambda functions (notification, analytics, migration)
+│   └── lambda/
+│       ├── notification-handler/
+│       ├── analytics-handler/
+│       └── db-migration/
+├── infra/                  # AWS CDK v2 (TypeScript) — all cloud infrastructure
+│   ├── bin/app.ts          # CDK app entry point — all stacks wired here
+│   └── lib/
+│       ├── network-stack.ts
+│       ├── database-stack.ts
+│       ├── compute-stack.ts
+│       ├── auth-stack.ts
+│       ├── api-stack.ts
+│       ├── frontend-stack.ts
+│       ├── events-stack.ts
+│       ├── analytics-stack.ts
+│       └── observability-stack.ts
 ├── database/               # SQL migrations and seed data
-├── docker-compose.yaml     # Infrastructure (MySQL, Kafka, MinIO, Metabase)
-└── krakend.json            # API Gateway configuration
+├── docker-compose.yaml     # Local infrastructure
+└── krakend.json            # Local API Gateway config
 ```
 
-## Environment Variables
+---
 
-The API uses these environment variables (with defaults):
+## Well-Architected Coverage
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `KAFKA_BROKER` | `localhost:9022` | Kafka broker address |
-| `MINIO_BASE` | `http://localhost:9000` | MinIO base URL for images |
+| Pillar | What's implemented |
+|--------|-------------------|
+| Operational Excellence | Structured logging (Winston), CloudTrail, X-Ray tracing, ECS Container Insights |
+| Security | WAF, Cognito JWT auth, Secrets Manager, VPC Endpoints, IAM Access Analyzer, no public subnets |
+| Reliability | ECS Auto Scaling, SQS DLQs, RDS automated backups, health checks |
+| Performance Efficiency | CloudFront CDN, ECS Fargate right-sizing, Athena for analytics queries |
+| Cost Optimization | No NAT Gateway, Fargate pay-per-use, S3 lifecycle rules, Glacier archival |
+| Sustainability | No always-on EC2, event-driven Lambda, S3 Intelligent Tiering ready |
 
-## Stopping Everything
-
-```bash
-# Stop Docker services
-docker-compose down
-
-# Stop Node processes (Ctrl+C in each terminal)
-```
-
-## BI & Analytics Platform
-
-RoomHop includes Metabase for business intelligence dashboards, connected directly to the MySQL transactional database.
-
-### Architecture
-
-```
-MySQL (hotel_db) → Metabase (BI Dashboards)
-```
-
-Additionally, the Analytics Service writes event data as Parquet files to MinIO for long-term archival:
-
-```
-Kafka → Analytics Service → Parquet → MinIO (hotel-analytic-roomhop-76700)
-```
-
-| Component | Port | Purpose |
-|-----------|------|---------|
-| Metabase | 3001 | BI dashboards connected to MySQL |
-| Analytics Service | — | Kafka consumer, writes Parquet to MinIO for archival |
-
-### Setting Up Metabase
-
-1. Start Metabase: `docker-compose up -d metabase`
-2. Open **http://localhost:3001**
-3. Complete the setup wizard (create admin account)
-4. Add database connection:
-   - **Type**: MySQL
-   - **Host**: `host.docker.internal`
-   - **Port**: `3306`
-   - **Database**: `hotel_db`
-   - **Username**: `root`
-   - **Password**: `rootpassword`
-5. Metabase will scan tables and you can build dashboards immediately
-
-### Example KPI Queries (MySQL via Metabase)
-
-```sql
--- Daily booking volume
-SELECT DATE(created_at) AS booking_date, COUNT(*) AS bookings
-FROM reservation
-WHERE status = 'CONFIRMED'
-GROUP BY DATE(created_at)
-ORDER BY booking_date DESC
-LIMIT 30;
-
--- Revenue by hotel (monthly)
-SELECT h.name AS hotel_name, YEAR(r.created_at) AS yr, MONTH(r.created_at) AS mo,
-       SUM(r.amount) AS total_revenue, COUNT(*) AS total_bookings
-FROM reservation r
-JOIN hotel h ON h.hotel_id = r.hotel_id
-WHERE r.status = 'CONFIRMED'
-GROUP BY h.name, YEAR(r.created_at), MONTH(r.created_at)
-ORDER BY yr DESC, mo DESC, total_revenue DESC;
-
--- Cancellation rate by hotel
-SELECT h.name AS hotel_name,
-       SUM(CASE WHEN r.status = 'CONFIRMED' THEN 1 ELSE 0 END) AS confirmed,
-       SUM(CASE WHEN r.status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled,
-       ROUND(SUM(CASE WHEN r.status = 'CANCELLED' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS cancel_rate_pct
-FROM reservation r
-JOIN hotel h ON h.hotel_id = r.hotel_id
-GROUP BY h.name;
-
--- Average stay duration
-SELECT h.name, AVG(DATEDIFF(r.end_date, r.start_date)) AS avg_nights
-FROM reservation r
-JOIN hotel h ON h.hotel_id = r.hotel_id
-WHERE r.status = 'CONFIRMED'
-GROUP BY h.name;
-
--- Top room types by revenue
-SELECT rt.name AS room_type, COUNT(*) AS bookings, SUM(r.amount) AS revenue
-FROM reservation r
-JOIN room_type rt ON rt.room_type_id = r.room_type_id
-WHERE r.status = 'CONFIRMED'
-GROUP BY rt.name
-ORDER BY revenue DESC;
-```
-
-### Analytics Service (Parquet Archival)
-
-The analytics service still runs as a Kafka consumer writing Parquet to MinIO for long-term archival. This data can be queried later with Athena, Spark, or Trino if needed at scale.
-
-```bash
-cd analytics-service
-npm install
-node src/consumer.js
-```
-
-### Analytics Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `KAFKA_BROKER` | `localhost:9022` | Kafka broker address |
-| `MINIO_ENDPOINT` | `localhost` | MinIO host |
-| `MINIO_PORT` | `9000` | MinIO port |
-| `MINIO_ACCESS_KEY` | `minioadmin` | MinIO access key |
-| `MINIO_SECRET_KEY` | `miniopassword` | MinIO secret key |
+---
 
 ## License
 
 Private project — not for distribution.
-
-
-## Structured Logging
-
-Both backend services use **Winston** for structured JSON logging with automatic CloudWatch integration.
-
-### Local Development
-
-Logs appear in the console with colorized, human-readable format:
-```
-15:04:22.123 [info] [hotel-api] Request received {"requestId":"abc-123","method":"GET","path":"/v1/search"}
-```
-
-JSON logs are also written to `logs/app.log` in each service directory.
-
-### AWS Deployment (CloudWatch)
-
-Set these environment variables to enable CloudWatch logging:
-
-```bash
-export NODE_ENV=production
-export AWS_REGION=eu-west-1          # Your AWS region
-export LOG_GROUP=roomhop/hotel-api   # Optional: custom log group name
-export LOG_LEVEL=info                # Optional: minimum log level
-```
-
-**Required IAM Permissions:**
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Action": [
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:PutLogEvents",
-      "logs:DescribeLogStreams"
-    ],
-    "Resource": "arn:aws:logs:*:*:log-group:roomhop/*"
-  }]
-}
-```
-
-### Testing Logging Locally
-
-1. Start the API: `cd hotel-api && node src/app.js`
-2. Make a request: `curl http://localhost:3000/v1/search?location=Paris&checkIn=2026-07-15&checkOut=2026-07-20&guests=1`
-3. Check console output — you'll see structured request/response logs
-4. Check `hotel-api/logs/app.log` for JSON-formatted logs
-
-To simulate production logging format locally:
-```bash
-NODE_ENV=production node src/app.js
-```
-
-### Log Levels
-
-| Level | Usage |
-|-------|-------|
-| error | Unhandled exceptions, DB failures, Kafka disconnects |
-| warn  | Validation failures, cancellation policy violations |
-| info  | Request lifecycle, reservations created/cancelled, Kafka events |
-| debug | SQL queries, event payloads, detailed flow tracing |
