@@ -27,7 +27,8 @@ CREATE TABLE hotel (
     location     VARCHAR(255) NOT NULL,       -- city / address combined for search
     description  TEXT,
     stars        TINYINT CHECK (stars BETWEEN 1 AND 5),
-    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at   TIMESTAMP NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
@@ -124,6 +125,25 @@ CREATE TABLE hotel_images (
     image_url   VARCHAR(500) NOT NULL,         -- MinIO object key, e.g. "hotel_beaux_arts.png"
     is_primary  BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (hotel_id) REFERENCES hotel(hotel_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE hotel_administrators (
+    admin_id              INT PRIMARY KEY AUTO_INCREMENT,
+    cognito_sub           VARCHAR(255) NOT NULL,
+    company_name          VARCHAR(255) NOT NULL,
+    tax_id                VARCHAR(100) NOT NULL,
+    full_name             VARCHAR(200) NOT NULL,
+    corporate_email       VARCHAR(255) NOT NULL,
+    phone_number          VARCHAR(50),
+    head_office_address   TEXT,
+    estimated_properties  INT DEFAULT 0,
+    primary_city          VARCHAR(150),
+    website_url           VARCHAR(500),
+    status                ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+    hotel_id              INT NULL,
+    created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (hotel_id) REFERENCES hotel(hotel_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================

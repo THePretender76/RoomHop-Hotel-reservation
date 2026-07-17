@@ -2,8 +2,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { isAuthEnabled } from './amplifyConfig';
 
-export default function PrivateRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+export default function PrivateRoute({ children, requiredGroup }) {
+  const { isAuthenticated, loading, user } = useAuth();
   const location = useLocation();
 
   // If auth is disabled (local dev), allow access
@@ -19,6 +19,10 @@ export default function PrivateRoute({ children }) {
       sessionStorage.setItem('rh_pending_booking', JSON.stringify(location.state));
     }
     return <Navigate to="/sign-in" state={{ from: location }} replace />;
+  }
+
+  if (requiredGroup && !user?.groups?.includes(requiredGroup)) {
+    return <Navigate to="/onboarding/professional" replace />;
   }
 
   return children;

@@ -7,6 +7,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [partnerStatus, setPartnerStatusState] = useState('guest');
 
   useEffect(() => {
     if (!isAuthEnabled()) {
@@ -20,7 +21,9 @@ export function AuthProvider({ children }) {
     try {
       const currentUser = await getCurrentUser();
       const attrs = await fetchUserAttributes();
-      setUser({ ...currentUser, attributes: attrs });
+      const session = await fetchAuthSession();
+      const groups = session.tokens?.idToken?.payload?.['cognito:groups'] || [];
+      setUser({ ...currentUser, attributes: attrs, groups });
     } catch {
       setUser(null);
     } finally {
@@ -51,6 +54,7 @@ export function AuthProvider({ children }) {
   async function logout() {
     await signOut();
     setUser(null);
+    setPartnerStatusState('guest');
   }
 
   async function getToken() {
@@ -63,8 +67,14 @@ export function AuthProvider({ children }) {
     }
   }
 
+  function setPartnerStatus(value) {
+    setPartnerStatusState(value);
+  }
+
+  const derivedPartnerStatus = user?.attributes?.['custom:partner_status'] || partnerStatus;
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, confirmRegistration, logout, getToken, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, loading, login, register, confirmRegistration, logout, getToken, isAuthenticated: !!user, partnerStatus: derivedPartnerStatus, setPartnerStatus }}>
       {children}
     </AuthContext.Provider>
   );

@@ -10,7 +10,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, partnerStatus } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -28,6 +28,25 @@ export default function Navbar() {
   const handleSignOut = async () => {
     await logout();
     navigate('/');
+  };
+
+  const handleManageProperty = () => {
+    if (!isAuthenticated) {
+      navigate('/auth/portal?redirect=/admin/dashboard');
+      return;
+    }
+
+    if (partnerStatus === 'pending') {
+      navigate('/onboarding/pending-review');
+      return;
+    }
+
+    if (partnerStatus === 'approved') {
+      navigate('/admin/dashboard');
+      return;
+    }
+
+    navigate('/onboarding/professional');
   };
 
   // Display name from Cognito attributes
@@ -57,6 +76,7 @@ export default function Navbar() {
         </div>
 
         <div className={styles.authButtons}>
+          <button className={styles.authBtnSolid} onClick={handleManageProperty}>Manage Hotel Property</button>
           {authEnabled && isAuthenticated ? (
             <>
               <span className={styles.userName}>{displayName}</span>
@@ -103,6 +123,7 @@ export default function Navbar() {
         <Link to="/search" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>Search</Link>
         <Link to="/reservations" className={styles.mobileLink} onClick={() => setMenuOpen(false)}>My Reservations</Link>
         <div className={styles.mobileAuthButtons}>
+          <button className={styles.authBtnSolid} onClick={handleManageProperty}>Manage Hotel Property</button>
           {authEnabled && isAuthenticated ? (
             <>
               <span className={styles.mobileUserName}>{displayName}</span>

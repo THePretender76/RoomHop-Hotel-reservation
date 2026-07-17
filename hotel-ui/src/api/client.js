@@ -101,6 +101,31 @@ export async function apiPost(path, body = {}, headers = {}) {
  * @returns {Promise<any>} Parsed JSON response body
  * @throws {{ status: number, message: string, data: any }} On non-2xx response
  */
+export async function apiPut(path, body = {}, headers = {}) {
+  const url = new URL(path, BASE_URL);
+  const authHeaders = await getAuthHeaders();
+
+  const response = await fetch(url.toString(), {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders,
+      ...headers,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    let errorData = {};
+    try { errorData = await response.json(); } catch {}
+    const err = new Error(errorData.error || response.statusText);
+    err.status = response.status;
+    err.data = errorData;
+    throw err;
+  }
+  return response.json();
+}
+
 export async function apiDelete(path) {
   const url = new URL(path, BASE_URL);
   const authHeaders = await getAuthHeaders();

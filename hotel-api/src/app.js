@@ -8,6 +8,7 @@ const requestLogger = require('./middleware/requestLogger');
 const searchRoutes = require('./routes/search');
 const v1SearchRoutes = require('./routes/v1/search');
 const v1ReservationRoutes = require('./routes/v1/reservations');
+const v1AdminRoutes = require('./routes/v1/admin');
 const { initProducer } = require('./services/kafkaProducer');
 const cors = require('cors');
 const app = express();
@@ -33,6 +34,7 @@ app.use('/hotels', require('./routes/hotels'));
 app.use('/search', searchRoutes);
 app.use('/v1/search', v1SearchRoutes);
 app.use('/v1/reservations', v1ReservationRoutes);
+app.use('/v1/admin', v1AdminRoutes);
 
 // ==============================
 // START SERVER
