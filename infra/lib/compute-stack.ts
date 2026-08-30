@@ -43,6 +43,15 @@ export class ComputeStack extends cdk.Stack {
       imageScanOnPush: true,
     });
 
+    // ─── ECR Repo for X-Ray daemon (mirrored from ECR Public before deploy) ────
+    // public.ecr.aws/xray/aws-xray-daemon is NOT accessible from a private VPC.
+    // Run scripts/mirror-xray-to-ecr.ps1 before deploying this stack.
+    const xrayRepo = new ecr.Repository(this, 'XRayDaemonRepo', {
+      repositoryName: `${CONFIG.projectName}/xray-daemon`,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      emptyOnDelete: true,
+    });
+
     // ─── ECS Cluster ────────────────────────────────────────────────────────────
     const cluster = new ecs.Cluster(this, 'RoomHopCluster', {
       vpc,
@@ -80,6 +89,10 @@ export class ComputeStack extends cdk.Stack {
 
     // Allow pulling secrets from Secrets Manager
     dbSecret.grantRead(taskExecutionRole);
+    // Allow pulling all ECR repos (search, reservation, xray-daemon)
+    searchRepo.grantPull(taskExecutionRole);
+    reservationRepo.grantPull(taskExecutionRole);
+    xrayRepo.grantPull(taskExecutionRole);
 
     // ─── Shared Task Role ───────────────────────────────────────────────────────
     const taskRole = new iam.Role(this, 'TaskRole', {
@@ -164,9 +177,10 @@ export class ComputeStack extends cdk.Stack {
       });
 
       // ─── X-Ray Daemon Sidecar ──────────────────────────────────────────────────
-      // Runs alongside the app container, collects traces and sends to X-Ray
+      // Image pulled from private ECR (mirrored from public.ecr.aws/xray/aws-xray-daemon).
+      // Run scripts/mirror-xray-to-ecr.ps1 before first deploy.
       taskDefinition.addContainer(`${serviceName}XRayDaemon`, {
-        image: ecs.ContainerImage.fromRegistry('public.ecr.aws/xray/aws-xray-daemon:latest'),
+        image: ecs.ContainerImage.fromEcrRepository(xrayRepo, 'latest'),
         essential: false,
         portMappings: [{ containerPort: 2000, protocol: ecs.Protocol.UDP }],
         logging: ecs.LogDrivers.awsLogs({
