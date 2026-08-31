@@ -245,7 +245,31 @@ export class ComputeStack extends cdk.Stack {
 
     // ─── Create Services ────────────────────────────────────────────────────────
     createService('search', searchRepo, CONFIG.ecs.searchService, '/v1/search*');
-    createService('reservation', reservationRepo, CONFIG.ecs.reservationService, '/v1/reservations*');
+    const reservationService = createService('reservation', reservationRepo, CONFIG.ecs.reservationService, '/v1/reservations*');
+
+    // ─── Admin routes → reservation service (same ECS task, different path) ────
+    // /v1/admin/* is handled by the same reservation-service container.
+    // We need a separate ALB rule at priority 25 (between search=10 and reservation=20).
+    const adminTargetGroup = new elbv2.ApplicationTargetGroup(this, 'AdminTg', {
+      vpc,
+      port: 3000,
+      protocol: elbv2.ApplicationProtocol.HTTP,
+      targets: [reservationService],
+      healthCheck: {
+        path: '/health',
+        interval: cdk.Duration.seconds(30),
+        healthyThresholdCount: 2,
+        unhealthyThresholdCount: 3,
+      },
+      targetGroupName: `${CONFIG.projectName}-admin`,
+    });
+
+    new elbv2.ApplicationListenerRule(this, 'AdminRule', {
+      listener: this.albListener,
+      priority: 25,
+      conditions: [elbv2.ListenerCondition.pathPatterns(['/v1/admin*'])],
+      targetGroups: [adminTargetGroup],
+    });
 
     // ─── Outputs ────────────────────────────────────────────────────────────────
     new cdk.CfnOutput(this, 'AlbDnsName', {

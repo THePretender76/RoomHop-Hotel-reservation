@@ -99,6 +99,47 @@ export class ApiStack extends cdk.Stack {
       authorizer: jwtAuthorizer,
     });
 
+    // ─── Admin routes (authenticated — group enforcement is in the backend) ────
+    // Partner onboarding application (requires HotelPartnerPending group)
+    httpApi.addRoutes({
+      path: '/v1/admin/partners/applications',
+      methods: [apigatewayv2.HttpMethod.POST, apigatewayv2.HttpMethod.GET],
+      integration: albIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    // Partner application review (requires SuperAdmin group)
+    httpApi.addRoutes({
+      path: '/v1/admin/partners/applications/{proxy+}',
+      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.PUT],
+      integration: albIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    // Composite property creation (requires HotelPartner group)
+    httpApi.addRoutes({
+      path: '/v1/admin/hotels/complete',
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: albIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    // Hotel management (update, delete, add rooms)
+    httpApi.addRoutes({
+      path: '/v1/admin/hotels/{proxy+}',
+      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.PUT, apigatewayv2.HttpMethod.DELETE, apigatewayv2.HttpMethod.POST],
+      integration: albIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
+    // Room type management
+    httpApi.addRoutes({
+      path: '/v1/admin/room-types/{proxy+}',
+      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.PUT, apigatewayv2.HttpMethod.DELETE],
+      integration: albIntegration,
+      authorizer: jwtAuthorizer,
+    });
+
     this.apiEndpoint = httpApi.apiEndpoint;
 
     // ─── Outputs ────────────────────────────────────────────────────────────────
