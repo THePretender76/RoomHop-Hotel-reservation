@@ -27,7 +27,7 @@ export default function BookingModal({ hotel, roomTypes, checkIn, checkOut, gues
       await submit({
         hotel_id: hotel.hotel_id,
         room_type_id: selectedRoomType.room_type_id,
-        guest_id: 1, // TODO: create/lookup guest by email
+        guest_id: 1, // Legacy local API compatibility; AWS derives the guest from the JWT.
         start_date: checkIn,
         end_date: checkOut,
         room_count: 1,

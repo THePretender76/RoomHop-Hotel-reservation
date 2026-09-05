@@ -15,11 +15,16 @@ export const CONFIG = {
   ecs: {
     searchService: { cpu: 512, memory: 1024, desiredCount: 1 },
     reservationService: { cpu: 512, memory: 1024, desiredCount: 1 },
+    metabaseService: { cpu: 1024, memory: 2048, desiredCount: 1 },
   },
   opensearch: {
     domainName: 'roomhop-search',
     instanceType: 't3.small.search',
     instanceCount: 1,
+  },
+  dms: {
+    instanceClass: 'dms.t3.micro',
+    allocatedStorage: 20,
   },
   s3: {
     websiteBucket: 'roomhop-website',

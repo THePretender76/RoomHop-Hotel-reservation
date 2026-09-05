@@ -8,7 +8,7 @@ let pool = null;
 async function getPool() {
   if (pool) return pool;
 
-  const client = new SecretsManagerClient({ region: process.env.AWS_REGION || 'eu-west-1' });
+  const client = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
   const secret = await client.send(new GetSecretValueCommand({
     SecretId: process.env.DB_SECRET_ARN,
   }));

@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "RoomHop notification Lambda — SQS to SES email handler",
   "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.600.0"
   }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { IMAGES_BASE } from '../config';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import { isAuthEnabled } from '../auth/amplifyConfig';
 import styles from './Navbar.module.css';
 
@@ -17,10 +17,6 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [location]);
 
   const isHome = location.pathname === '/';
   const authEnabled = isAuthEnabled();

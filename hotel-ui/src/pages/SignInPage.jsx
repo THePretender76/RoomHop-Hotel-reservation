@@ -1,19 +1,16 @@
 ﻿import { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
+import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
+import { useAuth } from '../auth/useAuth';
 import styles from './SignInPage.module.css';
 
 export default function SignInPage() {
-  const { login, register, confirmRegistration, isAuthenticated, partnerStatus } = useAuth();
+  const { login, register, confirmRegistration, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/search';
   const fromState = location.state?.from?.state || null;
   const redirectPath = new URLSearchParams(location.search).get('redirect') || from;
   const resolvedRedirectPath = redirectPath?.startsWith('/') ? redirectPath : '/admin/dashboard';
-  const effectiveRedirectPath = resolvedRedirectPath === '/admin/dashboard' && partnerStatus !== 'approved' && partnerStatus !== 'pending'
-    ? '/onboarding/professional'
-    : resolvedRedirectPath;
 
   // Tab state: 'signin' or 'signup'
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'signin');
@@ -41,8 +38,7 @@ export default function SignInPage() {
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    navigate(effectiveRedirectPath, { replace: true, state: fromState });
-    return null;
+    return <Navigate to={resolvedRedirectPath} replace state={fromState} />;
   }
 
   async function handleSignIn(e) {
@@ -52,7 +48,7 @@ export default function SignInPage() {
     try {
       const result = await login(signInEmail, signInPassword);
       if (result.isSignedIn) {
-        navigate(effectiveRedirectPath, { replace: true, state: fromState });
+        navigate(resolvedRedirectPath, { replace: true, state: fromState });
       } else if (result.nextStep?.signInStep === 'CONFIRM_SIGN_UP') {
         setConfirmEmail(signInEmail);
         setNeedsConfirmation(true);
@@ -96,7 +92,7 @@ export default function SignInPage() {
       try {
         const result = await login(confirmEmail, signUpPassword || signInPassword);
         if (result.isSignedIn) {
-          navigate(effectiveRedirectPath, { replace: true, state: fromState });
+          navigate(resolvedRedirectPath, { replace: true, state: fromState });
           return;
         }
       } catch {

@@ -1,7 +1,12 @@
 'use strict';
 
 const { Kafka } = require('kafkajs');
-const { handleConfirmed, handleCancelled } = require('./notificationHandler');
+const {
+  handleConfirmed,
+  handleCancelled,
+  handlePartnerSubmitted,
+  handlePartnerReviewed,
+} = require('./notificationHandler');
 const logger = require('./logger');
 
 const BROKER = process.env.KAFKA_BROKER || 'localhost:9022';
@@ -21,6 +26,10 @@ async function processMessage(event) {
     await handleConfirmed(event);
   } else if (event.eventType === 'reservation.cancelled') {
     await handleCancelled(event);
+  } else if (event.eventType === 'partner.application.submitted') {
+    await handlePartnerSubmitted(event);
+  } else if (event.eventType === 'partner.application.reviewed') {
+    await handlePartnerReviewed(event);
   } else {
     logger.warn('Unknown event type received', { eventType: event.eventType });
   }

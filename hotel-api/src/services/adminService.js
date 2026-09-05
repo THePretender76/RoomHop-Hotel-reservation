@@ -1,300 +1,451 @@
+'use strict';
+
 const db = require('../db');
-const { CognitoIdentityServiceProvider } = require('aws-sdk');
+const { publishOrThrow } = require('./kafkaProducer');
+const {
+  CognitoIdentityProviderClient,
+  AdminAddUserToGroupCommand,
+  AdminRemoveUserFromGroupCommand,
+  AdminUpdateUserAttributesCommand,
+} = require('@aws-sdk/client-cognito-identity-provider');
 
-const cognito = new CognitoIdentityServiceProvider({ region: process.env.AWS_REGION || 'us-east-1' });
+const TOPIC = 'hotel.events.reservations';
+const cognito = new CognitoIdentityProviderClient({
+  region: process.env.AWS_REGION || 'us-east-1',
+});
 
-async function updateCognitoGroups(cognitoSub, status) {
-  if (!cognitoSub || !process.env.COGNITO_USER_POOL_ID) {
-    return;
+class HttpError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function requiredString(value, label, maxLength = 500) {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  if (!normalized) throw new HttpError(422, `${label} is required`);
+  if (normalized.length > maxLength) {
+    throw new HttpError(422, `${label} must be ${maxLength} characters or fewer`);
+  }
+  return normalized;
+}
+
+async function setPartnerAccess(username, status) {
+  const userPoolId = process.env.COGNITO_USER_POOL_ID;
+  if (!userPoolId) return;
+  if (!username) throw new HttpError(422, 'Cognito username is required');
+
+  const normalizedStatus = String(status).toUpperCase();
+  if (!['PENDING', 'APPROVED', 'REJECTED'].includes(normalizedStatus)) {
+    throw new HttpError(422, `Unsupported partner status: ${status}`);
   }
 
-  if (status === 'APPROVED') {
-    await cognito.adminAddUserToGroup({
-      UserPoolId: process.env.COGNITO_USER_POOL_ID,
-      Username: cognitoSub,
-      GroupName: 'HotelPartner',
-    }).promise();
-
-    await cognito.adminRemoveUserFromGroup({
-      UserPoolId: process.env.COGNITO_USER_POOL_ID,
-      Username: cognitoSub,
+  if (normalizedStatus === 'PENDING') {
+    await cognito.send(new AdminAddUserToGroupCommand({
+      UserPoolId: userPoolId,
+      Username: username,
       GroupName: 'HotelPartnerPending',
-    }).promise();
+    }));
+    await cognito.send(new AdminRemoveUserFromGroupCommand({
+      UserPoolId: userPoolId,
+      Username: username,
+      GroupName: 'HotelPartner',
+    }));
+  } else if (normalizedStatus === 'APPROVED') {
+    await cognito.send(new AdminAddUserToGroupCommand({
+      UserPoolId: userPoolId,
+      Username: username,
+      GroupName: 'HotelPartner',
+    }));
+    await cognito.send(new AdminRemoveUserFromGroupCommand({
+      UserPoolId: userPoolId,
+      Username: username,
+      GroupName: 'HotelPartnerPending',
+    }));
+  } else {
+    await cognito.send(new AdminRemoveUserFromGroupCommand({
+      UserPoolId: userPoolId,
+      Username: username,
+      GroupName: 'HotelPartner',
+    }));
+    await cognito.send(new AdminRemoveUserFromGroupCommand({
+      UserPoolId: userPoolId,
+      Username: username,
+      GroupName: 'HotelPartnerPending',
+    }));
   }
+
+  await cognito.send(new AdminUpdateUserAttributesCommand({
+    UserPoolId: userPoolId,
+    Username: username,
+    UserAttributes: [{
+      Name: 'custom:partner_status',
+      Value: normalizedStatus.toLowerCase(),
+    }],
+  }));
 }
 
-function validatePartnerApplication(data) {
+function normalizePartnerApplication(data, identity) {
   if (!data || typeof data !== 'object') {
-    throw new Error('Application payload is required');
+    throw new HttpError(422, 'Application payload is required');
+  }
+  if (!identity?.sub || !identity?.username) {
+    throw new HttpError(401, 'Authenticated Cognito identity is required');
   }
 
-  if (!data.companyName || !String(data.companyName).trim()) {
-    throw new Error('Company name is required');
+  const corporateEmail = requiredString(data.corporateEmail, 'Corporate email', 255).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(corporateEmail)) {
+    throw new HttpError(422, 'Corporate email is invalid');
   }
 
-  if (!data.taxId || !String(data.taxId).trim()) {
-    throw new Error('Tax ID is required');
+  const websiteUrl = requiredString(data.websiteUrl, 'Website URL', 500);
+  let parsedWebsite;
+  try {
+    parsedWebsite = new URL(websiteUrl);
+  } catch {
+    throw new HttpError(422, 'Website URL is invalid');
+  }
+  if (!['http:', 'https:'].includes(parsedWebsite.protocol)) {
+    throw new HttpError(422, 'Website URL must use http or https');
   }
 
-  if (!data.fullName || !String(data.fullName).trim()) {
-    throw new Error('Full name is required');
+  const estimatedProperties = Number(data.estimatedProperties);
+  if (!Number.isInteger(estimatedProperties) || estimatedProperties < 1 || estimatedProperties > 10000) {
+    throw new HttpError(422, 'Estimated properties must be an integer between 1 and 10000');
   }
 
-  if (!data.corporateEmail || !String(data.corporateEmail).trim()) {
-    throw new Error('Corporate email is required');
-  }
-
-  if (!data.phoneNumber || !String(data.phoneNumber).trim()) {
-    throw new Error('Phone number is required');
-  }
-
-  if (!data.headOfficeAddress || !String(data.headOfficeAddress).trim()) {
-    throw new Error('Head office address is required');
-  }
-
-  if (!data.primaryCity || !String(data.primaryCity).trim()) {
-    throw new Error('Primary city is required');
-  }
-
-  if (!data.websiteUrl || !String(data.websiteUrl).trim()) {
-    throw new Error('Website URL is required');
-  }
-
-  if (!data.cognitoSub || !String(data.cognitoSub).trim()) {
-    throw new Error('Cognito subject is required');
-  }
+  return {
+    cognitoSub: identity.sub,
+    cognitoUsername: identity.username,
+    companyName: requiredString(data.companyName, 'Company name', 255),
+    taxId: requiredString(data.taxId, 'Tax ID', 100),
+    fullName: requiredString(data.fullName, 'Full name', 200),
+    corporateEmail,
+    phoneNumber: requiredString(data.phoneNumber, 'Phone number', 50),
+    headOfficeAddress: requiredString(data.headOfficeAddress, 'Head office address', 1000),
+    estimatedProperties,
+    primaryCity: requiredString(data.primaryCity, 'Primary city', 150),
+    websiteUrl: parsedWebsite.toString(),
+  };
 }
 
-function validateCompleteProperty(payload) {
-  if (!payload || typeof payload !== 'object') {
-    throw new Error('Property payload is required');
-  }
-
-  if (!payload.hotel || typeof payload.hotel !== 'object') {
-    throw new Error('Hotel payload is required');
-  }
-
-  if (!payload.hotel.name || !String(payload.hotel.name).trim()) {
-    throw new Error('Hotel name is required');
-  }
-
-  if (!payload.hotel.location || !String(payload.hotel.location).trim()) {
-    throw new Error('Hotel location is required');
-  }
-
-  if (!payload.hotel.description || !String(payload.hotel.description).trim()) {
-    throw new Error('Hotel description is required');
-  }
-
-  if (!payload.hotel.stars || Number(payload.hotel.stars) < 1 || Number(payload.hotel.stars) > 5) {
-    throw new Error('Hotel stars must be between 1 and 5');
-  }
-
-  if (!Array.isArray(payload.roomTypes)) {
-    throw new Error('Room types must be an array');
-  }
-}
-
-async function createPartnerApplication(data) {
-  validatePartnerApplication(data);
-
+async function createPartnerApplication(data, identity) {
+  const application = normalizePartnerApplication(data, identity);
   const [result] = await db.query(
     `INSERT INTO hotel_administrators (
-      cognito_sub,
-      company_name,
-      tax_id,
-      full_name,
-      corporate_email,
-      phone_number,
-      head_office_address,
-      estimated_properties,
-      primary_city,
-      website_url,
-      status,
-      created_at,
-      updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', NOW(), NOW())`,
+       cognito_sub, cognito_username, company_name, tax_id, full_name,
+       corporate_email, phone_number, head_office_address,
+       estimated_properties, primary_city, website_url, status,
+       created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', NOW(), NOW())
+     ON DUPLICATE KEY UPDATE
+       admin_id = LAST_INSERT_ID(admin_id),
+       cognito_username = VALUES(cognito_username),
+       company_name = VALUES(company_name),
+       tax_id = VALUES(tax_id),
+       full_name = VALUES(full_name),
+       corporate_email = VALUES(corporate_email),
+       phone_number = VALUES(phone_number),
+       head_office_address = VALUES(head_office_address),
+       estimated_properties = VALUES(estimated_properties),
+       primary_city = VALUES(primary_city),
+       website_url = VALUES(website_url),
+       status = 'PENDING',
+       updated_at = NOW()`,
     [
-      data.cognitoSub,
-      data.companyName,
-      data.taxId,
-      data.fullName,
-      data.corporateEmail,
-      data.phoneNumber,
-      data.headOfficeAddress,
-      Number(data.estimatedProperties || 0),
-      data.primaryCity,
-      data.websiteUrl,
+      application.cognitoSub,
+      application.cognitoUsername,
+      application.companyName,
+      application.taxId,
+      application.fullName,
+      application.corporateEmail,
+      application.phoneNumber,
+      application.headOfficeAddress,
+      application.estimatedProperties,
+      application.primaryCity,
+      application.websiteUrl,
     ]
   );
 
-  return { applicantId: result.insertId, status: 'PENDING' };
-}
+  const applicantId = result.insertId;
+  await setPartnerAccess(application.cognitoUsername, 'PENDING');
+  await publishOrThrow(TOPIC, {
+    eventType: 'partner.application.submitted',
+    applicantId,
+    applicantName: application.fullName,
+    companyName: application.companyName,
+    corporateEmail: application.corporateEmail,
+    status: 'PENDING',
+    occurredAt: new Date().toISOString(),
+  });
 
-async function createCompleteProperty(payload) {
-  validateCompleteProperty(payload);
-
-  const conn = await db.getConnection();
-  await conn.beginTransaction();
-
-  try {
-    const [hotelResult] = await conn.query(
-      `INSERT INTO hotel (name, location, description, stars, created_at)
-       VALUES (?, ?, ?, ?, NOW())`,
-      [payload.hotel.name, payload.hotel.location, payload.hotel.description, Number(payload.hotel.stars)]
-    );
-
-    const hotelId = hotelResult.insertId;
-
-    for (const roomType of payload.roomTypes) {
-      const [roomTypeResult] = await conn.query(
-        `INSERT INTO room_type (hotel_id, name, max_occupancy, amenities)
-         VALUES (?, ?, ?, ?)`,
-        [hotelId, roomType.name, Number(roomType.maxOccupancy || 1), JSON.stringify(roomType.amenities || [])]
-      );
-
-      const roomTypeId = roomTypeResult.insertId;
-
-      if (roomType.nightlyRate !== undefined && roomType.nightlyRate !== null) {
-        const placeholders = Array.from({ length: 365 }, () => '(?, ?, ?, DATE_ADD(CURDATE(), INTERVAL ? DAY))').join(', ');
-        const params = [];
-
-        for (let dayOffset = 0; dayOffset < 365; dayOffset += 1) {
-          params.push(hotelId, roomTypeId, roomType.nightlyRate, dayOffset);
-        }
-
-        await conn.query(
-          `INSERT INTO room_type_rate (hotel_id, room_type_id, nightly_rate, date)
-           VALUES ${placeholders}`,
-          params
-        );
-      }
-
-      if (roomType.inventoryCount !== undefined && roomType.inventoryCount !== null) {
-        const placeholders = Array.from({ length: 365 }, () => '(?, ?, ?, DATE_ADD(CURDATE(), INTERVAL ? DAY), 0)').join(', ');
-        const params = [];
-
-        for (let dayOffset = 0; dayOffset < 365; dayOffset += 1) {
-          params.push(hotelId, roomTypeId, roomType.inventoryCount, dayOffset);
-        }
-
-        await conn.query(
-          `INSERT INTO room_type_inventory (hotel_id, room_type_id, total_inventory, date, total_reserved)
-           VALUES ${placeholders}`,
-          params
-        );
-      }
-
-      if (Array.isArray(roomType.inventoryRoomNumbers) && roomType.inventoryRoomNumbers.length > 0) {
-        for (const roomNumber of roomType.inventoryRoomNumbers) {
-          await conn.query(
-            `INSERT INTO room (hotel_id, room_type_id, room_number)
-             VALUES (?, ?, ?)`,
-            [hotelId, roomTypeId, roomNumber]
-          );
-        }
-      }
-    }
-
-    await conn.commit();
-    return { hotelId, roomTypes: payload.roomTypes };
-  } catch (error) {
-    await conn.rollback();
-    throw error;
-  } finally {
-    conn.release();
-  }
+  return { applicantId, status: 'PENDING', notificationQueued: true };
 }
 
 async function getPartnerApplications() {
   const [rows] = await db.query(
-    `SELECT admin_id, cognito_sub, company_name, tax_id, full_name, corporate_email, phone_number, head_office_address, estimated_properties, primary_city, website_url, status, created_at
-     FROM hotel_administrators
-     ORDER BY created_at DESC`
+    `SELECT admin_id, company_name, tax_id, full_name, corporate_email,
+            phone_number, head_office_address, estimated_properties,
+            primary_city, website_url, status, created_at, updated_at
+       FROM hotel_administrators
+      ORDER BY created_at DESC`
   );
-
   return rows;
 }
 
-async function reviewPartnerApplication(applicantId, status) {
-  const allowedStatuses = ['APPROVED', 'REJECTED'];
-  if (!allowedStatuses.includes(status)) {
-    throw new Error('Status must be APPROVED or REJECTED');
-  }
-
-  const [applicantRows] = await db.query(
-    `SELECT cognito_sub FROM hotel_administrators WHERE admin_id = ? LIMIT 1`,
-    [applicantId]
+async function getOwnPartnerApplication(cognitoSub) {
+  const [rows] = await db.query(
+    `SELECT admin_id, company_name, full_name, corporate_email, status,
+            estimated_properties, primary_city, created_at, updated_at
+       FROM hotel_administrators
+      WHERE cognito_sub = ?
+      LIMIT 1`,
+    [cognitoSub]
   );
-
-  if (!applicantRows.length) {
-    throw new Error('Applicant not found');
-  }
-
-  const [result] = await db.query(
-    `UPDATE hotel_administrators SET status = ?, updated_at = NOW() WHERE admin_id = ?`,
-    [status, applicantId]
-  );
-
-  if (result.affectedRows === 0) {
-    throw new Error('Applicant not found');
-  }
-
-  if (status === 'APPROVED') {
-    await updateCognitoGroups(applicantRows[0].cognito_sub, status);
-  }
-
-  return { applicantId, status };
+  if (!rows.length) throw new HttpError(404, 'Partner application not found');
+  return rows[0];
 }
 
-async function updateHotelMetadata(hotelId, data) {
-  const [result] = await db.query(
-    `UPDATE hotel SET name = ?, location = ?, description = ?, stars = ? WHERE hotel_id = ?`,
-    [data.name, data.location, data.description, data.stars, hotelId]
-  );
-
-  if (result.affectedRows === 0) {
-    throw new Error('Hotel not found');
+async function reviewPartnerApplication(applicantIdValue, requestedStatus) {
+  const applicantId = Number(applicantIdValue);
+  const status = String(requestedStatus || '').toUpperCase();
+  if (!Number.isInteger(applicantId) || applicantId < 1) {
+    throw new HttpError(422, 'Applicant ID is invalid');
+  }
+  if (!['APPROVED', 'REJECTED'].includes(status)) {
+    throw new HttpError(422, 'Status must be APPROVED or REJECTED');
   }
 
+  const [rows] = await db.query(
+    `SELECT admin_id, cognito_username, cognito_sub, company_name,
+            full_name, corporate_email
+       FROM hotel_administrators
+      WHERE admin_id = ?
+      LIMIT 1`,
+    [applicantId]
+  );
+  if (!rows.length) throw new HttpError(404, 'Partner application not found');
+
+  const application = rows[0];
+  await db.query(
+    'UPDATE hotel_administrators SET status = ?, updated_at = NOW() WHERE admin_id = ?',
+    [status, applicantId]
+  );
+  await setPartnerAccess(application.cognito_username || application.cognito_sub, status);
+  await publishOrThrow(TOPIC, {
+    eventType: 'partner.application.reviewed',
+    applicantId,
+    applicantName: application.full_name,
+    companyName: application.company_name,
+    corporateEmail: application.corporate_email,
+    status,
+    occurredAt: new Date().toISOString(),
+  });
+
+  return { applicantId, status, notificationQueued: true };
+}
+
+function normalizeHotel(hotel) {
+  const stars = Number(hotel?.stars);
+  if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
+    throw new HttpError(422, 'Hotel stars must be between 1 and 5');
+  }
+  return {
+    name: requiredString(hotel?.name, 'Hotel name', 150),
+    location: requiredString(hotel?.location, 'Hotel location', 255),
+    description: requiredString(hotel?.description, 'Hotel description', 5000),
+    stars,
+  };
+}
+
+function normalizeCompleteProperty(payload) {
+  if (!payload?.hotel || !Array.isArray(payload.roomTypes) || payload.roomTypes.length === 0) {
+    throw new HttpError(422, 'Hotel and at least one room type are required');
+  }
+  const roomTypes = payload.roomTypes.map((roomType, index) => {
+    const maxOccupancy = Number(roomType.maxOccupancy);
+    const nightlyRate = Number(roomType.nightlyRate);
+    const inventoryCount = Number(roomType.inventoryCount);
+    if (!Number.isInteger(maxOccupancy) || maxOccupancy < 1 || maxOccupancy > 50) {
+      throw new HttpError(422, `Room type ${index + 1} occupancy is invalid`);
+    }
+    if (!Number.isFinite(nightlyRate) || nightlyRate < 0) {
+      throw new HttpError(422, `Room type ${index + 1} nightly rate is invalid`);
+    }
+    if (!Number.isInteger(inventoryCount) || inventoryCount < 1 || inventoryCount > 10000) {
+      throw new HttpError(422, `Room type ${index + 1} inventory is invalid`);
+    }
+    return {
+      name: requiredString(roomType.name, `Room type ${index + 1} name`, 100),
+      maxOccupancy,
+      amenities: Array.isArray(roomType.amenities)
+        ? roomType.amenities.map((item) => String(item).trim()).filter(Boolean)
+        : [],
+      nightlyRate,
+      inventoryCount,
+      roomNumbers: Array.isArray(roomType.inventoryRoomNumbers)
+        ? [...new Set(roomType.inventoryRoomNumbers.map((item) => String(item).trim()).filter(Boolean))]
+        : [],
+    };
+  });
+  return { hotel: normalizeHotel(payload.hotel), roomTypes };
+}
+
+async function assertApprovedPartner(cognitoSub, connection = db) {
+  const [rows] = await connection.query(
+    `SELECT admin_id FROM hotel_administrators
+      WHERE cognito_sub = ? AND status = 'APPROVED'
+      LIMIT 1`,
+    [cognitoSub]
+  );
+  if (!rows.length) throw new HttpError(403, 'Approved partner application required');
+  return rows[0].admin_id;
+}
+
+async function assertOwnsHotel(cognitoSub, hotelId, connection = db) {
+  const [rows] = await connection.query(
+    `SELECT 1
+       FROM hotel_admin_properties hap
+       JOIN hotel_administrators ha ON ha.admin_id = hap.admin_id
+      WHERE ha.cognito_sub = ? AND ha.status = 'APPROVED' AND hap.hotel_id = ?
+      LIMIT 1`,
+    [cognitoSub, hotelId]
+  );
+  if (!rows.length) throw new HttpError(403, 'You do not manage this property');
+}
+
+async function createCompleteProperty(payload, cognitoSub) {
+  const normalized = normalizeCompleteProperty(payload);
+  const connection = await db.getConnection();
+  await connection.beginTransaction();
+  try {
+    const adminId = await assertApprovedPartner(cognitoSub, connection);
+    const [hotelResult] = await connection.query(
+      `INSERT INTO hotel (name, location, description, stars, created_at)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [normalized.hotel.name, normalized.hotel.location, normalized.hotel.description, normalized.hotel.stars]
+    );
+    const hotelId = hotelResult.insertId;
+    await connection.query(
+      'INSERT INTO hotel_admin_properties (admin_id, hotel_id) VALUES (?, ?)',
+      [adminId, hotelId]
+    );
+
+    const createdRoomTypes = [];
+    for (const roomType of normalized.roomTypes) {
+      const [roomTypeResult] = await connection.query(
+        `INSERT INTO room_type (hotel_id, name, max_occupancy, amenities)
+         VALUES (?, ?, ?, ?)`,
+        [hotelId, roomType.name, roomType.maxOccupancy, JSON.stringify(roomType.amenities)]
+      );
+      const roomTypeId = roomTypeResult.insertId;
+      createdRoomTypes.push({ roomTypeId, name: roomType.name });
+
+      const rateRows = [];
+      const inventoryRows = [];
+      for (let day = 0; day < 365; day += 1) {
+        rateRows.push([hotelId, roomTypeId, day, roomType.nightlyRate]);
+        inventoryRows.push([hotelId, roomTypeId, day, roomType.inventoryCount]);
+      }
+      await connection.query(
+        `INSERT INTO room_type_rate (hotel_id, room_type_id, date, nightly_rate)
+         VALUES ${rateRows.map(() => '(?, ?, DATE_ADD(CURDATE(), INTERVAL ? DAY), ?)').join(', ')}`,
+        rateRows.flat()
+      );
+      await connection.query(
+        `INSERT INTO room_type_inventory
+           (hotel_id, room_type_id, date, total_inventory, total_reserved)
+         VALUES ${inventoryRows.map(() => '(?, ?, DATE_ADD(CURDATE(), INTERVAL ? DAY), ?, 0)').join(', ')}`,
+        inventoryRows.flat()
+      );
+      for (const roomNumber of roomType.roomNumbers) {
+        await connection.query(
+          'INSERT INTO room (hotel_id, room_type_id, room_number) VALUES (?, ?, ?)',
+          [hotelId, roomTypeId, roomNumber]
+        );
+      }
+    }
+
+    await connection.commit();
+    return { hotelId, roomTypes: createdRoomTypes };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function updateHotelMetadata(hotelIdValue, data, cognitoSub) {
+  const hotelId = Number(hotelIdValue);
+  if (!Number.isInteger(hotelId) || hotelId < 1) throw new HttpError(422, 'Hotel ID is invalid');
+  await assertOwnsHotel(cognitoSub, hotelId);
+  const hotel = normalizeHotel(data);
+  const [result] = await db.query(
+    'UPDATE hotel SET name = ?, location = ?, description = ?, stars = ? WHERE hotel_id = ? AND deleted_at IS NULL',
+    [hotel.name, hotel.location, hotel.description, hotel.stars, hotelId]
+  );
+  if (!result.affectedRows) throw new HttpError(404, 'Hotel not found');
   return { hotelId };
 }
 
-async function updateRoomType(roomTypeId, data) {
-  const [result] = await db.query(
-    `UPDATE room_type SET name = ?, max_occupancy = ?, amenities = ? WHERE room_type_id = ?`,
-    [data.name, data.maxOccupancy, JSON.stringify(data.amenities || []), roomTypeId]
-  );
-
-  if (result.affectedRows === 0) {
-    throw new Error('Room type not found');
+async function updateRoomType(roomTypeIdValue, data, cognitoSub) {
+  const roomTypeId = Number(roomTypeIdValue);
+  if (!Number.isInteger(roomTypeId) || roomTypeId < 1) throw new HttpError(422, 'Room type ID is invalid');
+  const [rows] = await db.query('SELECT hotel_id FROM room_type WHERE room_type_id = ? LIMIT 1', [roomTypeId]);
+  if (!rows.length) throw new HttpError(404, 'Room type not found');
+  await assertOwnsHotel(cognitoSub, rows[0].hotel_id);
+  const name = requiredString(data?.name, 'Room type name', 100);
+  const maxOccupancy = Number(data?.maxOccupancy);
+  if (!Number.isInteger(maxOccupancy) || maxOccupancy < 1 || maxOccupancy > 50) {
+    throw new HttpError(422, 'Maximum occupancy is invalid');
   }
-
+  const amenities = Array.isArray(data?.amenities) ? data.amenities : [];
+  await db.query(
+    'UPDATE room_type SET name = ?, max_occupancy = ?, amenities = ? WHERE room_type_id = ?',
+    [name, maxOccupancy, JSON.stringify(amenities), roomTypeId]
+  );
   return { roomTypeId };
 }
 
-async function addRoomInventory(hotelId, roomTypeId, data) {
+async function addRoomInventory(hotelIdValue, roomTypeIdValue, data, cognitoSub) {
+  const hotelId = Number(hotelIdValue);
+  const roomTypeId = Number(roomTypeIdValue);
+  if (!Number.isInteger(hotelId) || !Number.isInteger(roomTypeId)) {
+    throw new HttpError(422, 'Hotel ID and room type ID are required');
+  }
+  await assertOwnsHotel(cognitoSub, hotelId);
+  const roomNumber = requiredString(data?.roomNumber, 'Room number', 20);
   const [result] = await db.query(
-    `INSERT INTO room (hotel_id, room_type_id, room_number) VALUES (?, ?, ?)` ,
-    [hotelId, roomTypeId, data.roomNumber]
+    `INSERT INTO room (hotel_id, room_type_id, room_number)
+     SELECT ?, ?, ? FROM room_type WHERE room_type_id = ? AND hotel_id = ?`,
+    [hotelId, roomTypeId, roomNumber, roomTypeId, hotelId]
   );
-
+  if (!result.affectedRows) throw new HttpError(404, 'Room type not found for this hotel');
   return { roomId: result.insertId };
 }
 
-async function deleteHotel(hotelId) {
-  const [result] = await db.query(`UPDATE hotel SET deleted_at = NOW() WHERE hotel_id = ?`, [hotelId]);
-  if (result.affectedRows === 0) {
-    throw new Error('Hotel not found');
-  }
+async function deleteHotel(hotelIdValue, cognitoSub) {
+  const hotelId = Number(hotelIdValue);
+  if (!Number.isInteger(hotelId) || hotelId < 1) throw new HttpError(422, 'Hotel ID is invalid');
+  await assertOwnsHotel(cognitoSub, hotelId);
+  const [result] = await db.query(
+    'UPDATE hotel SET deleted_at = NOW() WHERE hotel_id = ? AND deleted_at IS NULL',
+    [hotelId]
+  );
+  if (!result.affectedRows) throw new HttpError(404, 'Hotel not found');
   return { hotelId };
 }
 
 module.exports = {
+  HttpError,
+  normalizePartnerApplication,
+  normalizeCompleteProperty,
   createPartnerApplication,
-  createCompleteProperty,
   getPartnerApplications,
+  getOwnPartnerApplication,
   reviewPartnerApplication,
+  createCompleteProperty,
   updateHotelMetadata,
   updateRoomType,
   addRoomInventory,

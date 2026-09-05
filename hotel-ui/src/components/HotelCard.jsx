@@ -1,10 +1,10 @@
-import { IMAGES_BASE } from '../config';
+import { FALLBACK_IMAGE } from '../config';
 import styles from './HotelCard.module.css';
 
 export default function HotelCard({ hotel, onBook }) {
   const name = hotel.name || hotel.nom || 'RoomHop Hotel';
   const location = hotel.location || hotel.ville || hotel.city || '';
-  const image = hotel.primary_image_url || hotel.image_url || hotel.image || `${IMAGES_BASE}/placeholder_image/hotel-1.jpg`;
+  const image = hotel.primary_image_url || hotel.image_url || hotel.image || FALLBACK_IMAGE;
   const price = hotel.nightly_rate || hotel.prix || hotel.price || hotel.tarif || hotel.cost || 0;
   const rating = hotel.note || hotel.rating || hotel.score || 4.8;
   const stars = Number(hotel.etoiles || hotel.stars || 5);
@@ -22,6 +22,7 @@ export default function HotelCard({ hotel, onBook }) {
         alt={name}
         className={styles.image}
         loading="lazy"
+        onError={(event) => { event.currentTarget.src = FALLBACK_IMAGE; }}
       />
       <div className={styles.body}>
         <div className={styles.main}>

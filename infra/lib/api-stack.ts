@@ -7,6 +7,7 @@ import * as apigatewayv2Integrations from 'aws-cdk-lib/aws-apigatewayv2-integrat
 import * as apigatewayv2Authorizers from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { Construct } from 'constructs';
 import { CONFIG } from './config';
+import { SecurityGroups } from './network-stack';
 
 export interface ApiStackProps extends cdk.StackProps {
   vpc: ec2.Vpc;
@@ -14,6 +15,7 @@ export interface ApiStackProps extends cdk.StackProps {
   albListener: elbv2.ApplicationListener;
   userPool: cognito.UserPool;
   userPoolClient: cognito.UserPoolClient;
+  securityGroups: SecurityGroups;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -30,6 +32,7 @@ export class ApiStack extends cdk.Stack {
       vpc,
       vpcLinkName: `${CONFIG.projectName}-vpc-link`,
       subnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [props.securityGroups.vpcLinkSg],
     });
 
     // ─── HTTP API ───────────────────────────────────────────────────────────────

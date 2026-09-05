@@ -45,4 +45,16 @@ async function publish(topic, event) {
   }
 }
 
-module.exports = { initProducer, publish };
+/**
+ * Publish an event and propagate failures to the caller. Use this when the
+ * HTTP response promises that a downstream notification has been queued.
+ */
+async function publishOrThrow(topic, event) {
+  await producer.send({
+    topic,
+    messages: [{ value: JSON.stringify(event) }],
+  });
+  logger.debug('Event published to Kafka', { topic, eventType: event.eventType });
+}
+
+module.exports = { initProducer, publish, publishOrThrow };

@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { IMAGES_BASE } from '../config';
 import styles from './HomePage.module.css';
 
-const MINIO_BASE = `${IMAGES_BASE}/placeholder_image`;
+const MINIO_BASE = `${IMAGES_BASE}/placeholder_images`;
 
 const galleryItems = [
-  { id: 'gallery-1', label: 'Modern Suites', src: `${MINIO_BASE}/gallery-1.jpg` },
-  { id: 'gallery-2', label: 'Poolside Relax', src: `${MINIO_BASE}/gallery-2.jpg` },
-  { id: 'gallery-3', label: 'Scenic Views', src: `${MINIO_BASE}/gallery-3.jpg` },
+  { id: 'gallery-1', label: 'Modern Suites', src: `${MINIO_BASE}/gallery-1.svg` },
+  { id: 'gallery-2', label: 'Poolside Relax', src: `${MINIO_BASE}/gallery-2.svg` },
+  { id: 'gallery-3', label: 'Scenic Views', src: `${MINIO_BASE}/gallery-3.svg` },
 ];
 
 const testimonials = [

@@ -53,6 +53,8 @@ function authenticate(req, res, next) {
       const payload = jwt.decode(token, { complete: false }) || {};
       req.user = {
         sub: payload.sub,
+        username: payload['cognito:username'] || payload.username || payload.sub,
+        email: payload.email,
         groups: getGroupsFromPayload(payload),
       };
       return next();
@@ -61,13 +63,23 @@ function authenticate(req, res, next) {
     }
   }
 
-  jwt.verify(token, getSigningKey, { algorithms: ['RS256'] }, (error, payload) => {
+  const verifyOptions = {
+    algorithms: ['RS256'],
+    issuer: `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`,
+  };
+  if (process.env.COGNITO_CLIENT_ID) {
+    verifyOptions.audience = process.env.COGNITO_CLIENT_ID;
+  }
+
+  jwt.verify(token, getSigningKey, verifyOptions, (error, payload) => {
     if (error) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     req.user = {
       sub: payload.sub,
+      username: payload['cognito:username'] || payload.username || payload.sub,
+      email: payload.email,
       groups: getGroupsFromPayload(payload),
     };
     return next();

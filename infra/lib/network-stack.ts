@@ -8,6 +8,7 @@ import { CONFIG } from './config';
  * Strict least-privilege: each layer only accepts traffic from the layer above.
  */
 export interface SecurityGroups {
+  vpcLinkSg: ec2.SecurityGroup;
   albSg: ec2.SecurityGroup;
   ecsSg: ec2.SecurityGroup;
   rdsSg: ec2.SecurityGroup;
@@ -54,6 +55,12 @@ export class NetworkStack extends cdk.Stack {
     );
 
     // ALB SG — accepts traffic from VPC Link (API Gateway sends traffic from within VPC)
+    const vpcLinkSg = new ec2.SecurityGroup(this, 'VpcLinkSg', {
+      vpc: this.vpc,
+      description: 'Security group used only by API Gateway VPC Link ENIs',
+      allowAllOutbound: true,
+    });
+
     const albSg = new ec2.SecurityGroup(this, 'AlbSg', {
       vpc: this.vpc,
       description: 'Security group for internal ALB',
@@ -61,9 +68,14 @@ export class NetworkStack extends cdk.Stack {
     });
     // API Gateway VPC Link sends traffic from within the VPC subnets
     albSg.addIngressRule(
-      ec2.Peer.ipv4(CONFIG.vpc.cidr),
+      vpcLinkSg,
       ec2.Port.tcp(80),
-      'Allow HTTP from VPC Link (API Gateway)'
+      'Allow HTTP from API Gateway VPC Link only'
+    );
+    albSg.addIngressRule(
+      vpcLinkSg,
+      ec2.Port.tcp(8080),
+      'Allow Metabase HTTP API VPC Link only'
     );
 
     // ECS SG — accepts traffic only from the ALB
@@ -110,6 +122,7 @@ export class NetworkStack extends cdk.Stack {
     });
 
     this.securityGroups = {
+      vpcLinkSg,
       albSg,
       ecsSg,
       rdsSg,
@@ -133,7 +146,10 @@ export class NetworkStack extends cdk.Stack {
       { id: 'SecretsManagerEndpoint', service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER },
       { id: 'EventBridgeEndpoint', service: ec2.InterfaceVpcEndpointAwsService.EVENTBRIDGE },
       { id: 'SqsEndpoint', service: ec2.InterfaceVpcEndpointAwsService.SQS },
-      { id: 'SesEndpoint', service: ec2.InterfaceVpcEndpointAwsService.SES },
+      { id: 'CognitoIdpEndpoint', service: ec2.InterfaceVpcEndpointAwsService.COGNITO_IDP },
+      { id: 'XRayEndpoint', service: ec2.InterfaceVpcEndpointAwsService.XRAY },
+      { id: 'AthenaEndpoint', service: ec2.InterfaceVpcEndpointAwsService.ATHENA },
+      { id: 'GlueEndpoint', service: ec2.InterfaceVpcEndpointAwsService.GLUE },
       { id: 'SsmMessagesEndpoint', service: ec2.InterfaceVpcEndpointAwsService.SSM_MESSAGES },
     ];
 

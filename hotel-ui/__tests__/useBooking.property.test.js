@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 
 // UUID v4 regex pattern
@@ -56,12 +56,6 @@ describe('Property 13: SPA idempotency key is a valid UUID per submission sessio
    * Two independent submissions (after reset()) SHALL generate different UUIDs.
    * Retrying the same submission (before reset()) SHALL reuse the same UUID.
    */
-
-  let storage;
-
-  beforeEach(() => {
-    storage = new MockSessionStorage();
-  });
 
   it('ensureIdempotencyKey() always returns a valid UUID v4', () => {
     fc.assert(

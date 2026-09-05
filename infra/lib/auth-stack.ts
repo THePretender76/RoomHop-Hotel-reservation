@@ -27,6 +27,13 @@ export class AuthStack extends cdk.Stack {
         familyName: { required: true, mutable: true },
         phoneNumber: { required: false, mutable: true },
       },
+      customAttributes: {
+        partner_status: new cognito.StringAttribute({
+          mutable: true,
+          minLen: 4,
+          maxLen: 20,
+        }),
+      },
       passwordPolicy: {
         minLength: 8,
         requireLowercase: true,
@@ -46,15 +53,27 @@ export class AuthStack extends cdk.Stack {
     });
 
     // ─── User Pool Groups ───────────────────────────────────────────────────────
-    new cognito.CfnUserPoolGroup(this, 'AdminGroup', {
+    new cognito.CfnUserPoolGroup(this, 'PartnerPendingGroup', {
       userPoolId: this.userPool.userPoolId,
-      groupName: 'admin',
-      description: 'Hotel administrators',
+      groupName: 'HotelPartnerPending',
+      description: 'Authenticated users whose hotel partner application is under review',
+    });
+
+    new cognito.CfnUserPoolGroup(this, 'PartnerGroup', {
+      userPoolId: this.userPool.userPoolId,
+      groupName: 'HotelPartner',
+      description: 'Approved hotel property owners',
+    });
+
+    new cognito.CfnUserPoolGroup(this, 'SuperAdminGroup', {
+      userPoolId: this.userPool.userPoolId,
+      groupName: 'SuperAdmin',
+      description: 'RoomHop staff who review hotel partner applications',
     });
 
     new cognito.CfnUserPoolGroup(this, 'GuestGroup', {
       userPoolId: this.userPool.userPoolId,
-      groupName: 'guest',
+      groupName: 'Guest',
       description: 'Hotel guests',
     });
 
@@ -67,23 +86,15 @@ export class AuthStack extends cdk.Stack {
         userSrp: true,
         userPassword: false,
       },
-      oAuth: {
-        flows: {
-          authorizationCodeGrant: true,
-          implicitCodeGrant: false,
-        },
-        scopes: [
-          cognito.OAuthScope.OPENID,
-          cognito.OAuthScope.EMAIL,
-          cognito.OAuthScope.PROFILE,
-        ],
-        callbackUrls: ['https://localhost:3000/callback'],
-        logoutUrls: ['https://localhost:3000/'],
-      },
       preventUserExistenceErrors: true,
       accessTokenValidity: cdk.Duration.hours(1),
       idTokenValidity: cdk.Duration.hours(1),
       refreshTokenValidity: cdk.Duration.days(30),
+      readAttributes: new cognito.ClientAttributes()
+        .withStandardAttributes({ email: true, givenName: true, familyName: true, phoneNumber: true })
+        .withCustomAttributes('partner_status'),
+      writeAttributes: new cognito.ClientAttributes()
+        .withStandardAttributes({ email: true, givenName: true, familyName: true, phoneNumber: true }),
     });
 
     // ─── Outputs ────────────────────────────────────────────────────────────────

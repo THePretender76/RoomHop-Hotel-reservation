@@ -15,7 +15,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage'
 import PropertyRegistrationPage from './pages/PropertyRegistrationPage'
 import SuperAdminReviewPage from './pages/SuperAdminReviewPage'
 import PrivateRoute from './auth/PrivateRoute'
-import { useAuth } from './auth/AuthContext'
+import { useAuth } from './auth/useAuth'
 import { setAuthTokenGetter } from './api/client'
 
 function App() {
@@ -34,8 +34,16 @@ function App() {
           <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/sign-in" element={<SignInPage />} />
           <Route path="/auth/portal" element={<SignInPage />} />
-          <Route path="/onboarding/professional" element={<PartnerOnboardingPage />} />
-          <Route path="/onboarding/pending-review" element={<OnboardingPendingPage />} />
+          <Route path="/onboarding/professional" element={
+            <PrivateRoute>
+              <PartnerOnboardingPage />
+            </PrivateRoute>
+          } />
+          <Route path="/onboarding/pending-review" element={
+            <PrivateRoute>
+              <OnboardingPendingPage />
+            </PrivateRoute>
+          } />
           <Route path="/admin/dashboard" element={
             <PrivateRoute requiredGroup="HotelPartner">
               <AdminDashboardPage />

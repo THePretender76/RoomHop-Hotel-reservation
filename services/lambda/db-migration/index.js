@@ -1,8 +1,6 @@
 'use strict';
 const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
 const mysql = require('mysql2/promise');
-const https = require('https');
-const url = require('url');
 
 // Migration SQL embedded directly (avoiding S3 dependency)
 const MIGRATION_SQL = `
@@ -22,6 +20,8 @@ DROP TABLE IF EXISTS Hotel_Images;
 DROP TABLE IF EXISTS Hotels;
 
 -- Drop current tables for clean re-creation
+DROP TABLE IF EXISTS hotel_admin_properties;
+DROP TABLE IF EXISTS hotel_administrators;
 DROP TABLE IF EXISTS reservation;
 DROP TABLE IF EXISTS room_type_inventory;
 DROP TABLE IF EXISTS room_type_rate;
@@ -39,7 +39,8 @@ CREATE TABLE hotel (
     location     VARCHAR(255) NOT NULL,
     description  TEXT,
     stars        TINYINT CHECK (stars BETWEEN 1 AND 5),
-    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at   TIMESTAMP NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE room_type (
@@ -88,10 +89,12 @@ CREATE TABLE guest (
     first_name VARCHAR(100) NOT NULL,
     last_name  VARCHAR(100) NOT NULL,
     email      VARCHAR(255) NOT NULL UNIQUE,
+    cognito_sub VARCHAR(255) NULL,
     phone      VARCHAR(30),
     date_of_birth DATE,
     nationality VARCHAR(60),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_guest_cognito_sub (cognito_sub)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE reservation (
@@ -193,42 +196,112 @@ INSERT INTO guest (guest_id, first_name, last_name, email) VALUES
 
 `;
 
-async function sendResponse(event, status, reason) {
-  const responseBody = JSON.stringify({
-    Status: status,
-    Reason: reason || 'See CloudWatch Logs',
-    PhysicalResourceId: event.LogicalResourceId || 'db-migration',
-    StackId: event.StackId,
-    RequestId: event.RequestId,
-    LogicalResourceId: event.LogicalResourceId,
-  });
+const ADMIN_APPLICATIONS_MIGRATION_SQL = `
+CREATE TABLE IF NOT EXISTS hotel_administrators (
+  admin_id              INT PRIMARY KEY AUTO_INCREMENT,
+  cognito_sub           VARCHAR(255) NOT NULL,
+  cognito_username      VARCHAR(255) NULL,
+  company_name          VARCHAR(255) NOT NULL,
+  tax_id                VARCHAR(100) NOT NULL,
+  full_name             VARCHAR(200) NOT NULL,
+  corporate_email       VARCHAR(255) NOT NULL,
+  phone_number          VARCHAR(50),
+  head_office_address   TEXT,
+  estimated_properties  INT DEFAULT 0,
+  primary_city          VARCHAR(150),
+  website_url           VARCHAR(500),
+  status                ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+  hotel_id              INT NULL,
+  created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_hotel_administrator_cognito_sub (cognito_sub),
+  FOREIGN KEY (hotel_id) REFERENCES hotel(hotel_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-  const parsedUrl = url.parse(event.ResponseURL);
-  const options = {
-    hostname: parsedUrl.hostname,
-    port: 443,
-    path: parsedUrl.path,
-    method: 'PUT',
-    headers: { 'Content-Type': '', 'Content-Length': responseBody.length },
+CREATE TABLE IF NOT EXISTS hotel_admin_properties (
+  admin_id  INT NOT NULL,
+  hotel_id  INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (admin_id, hotel_id),
+  FOREIGN KEY (admin_id) REFERENCES hotel_administrators(admin_id) ON DELETE CASCADE,
+  FOREIGN KEY (hotel_id) REFERENCES hotel(hotel_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+`;
+
+async function columnExists(conn, tableName, columnName) {
+  const [rows] = await conn.query(
+    `SELECT 1 FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?
+      LIMIT 1`,
+    [tableName, columnName]
+  );
+  return rows.length > 0;
+}
+
+async function tableExists(conn, tableName) {
+  const [rows] = await conn.query(
+    `SELECT 1 FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+      LIMIT 1`,
+    [tableName]
+  );
+  return rows.length > 0;
+}
+
+async function indexExists(conn, tableName, indexName) {
+  const [rows] = await conn.query(
+    `SELECT 1 FROM information_schema.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?
+      LIMIT 1`,
+    [tableName, indexName]
+  );
+  return rows.length > 0;
+}
+
+async function applyIncrementalMigrations(conn) {
+  await conn.query(ADMIN_APPLICATIONS_MIGRATION_SQL);
+
+  // Keep enough RDS binary logs for DMS to resume CDC after interruptions.
+  // This RDS-provided procedure is idempotent.
+  await conn.query("CALL mysql.rds_set_configuration('binlog retention hours', 24)");
+
+  if (!(await columnExists(conn, 'hotel', 'deleted_at'))) {
+    await conn.query('ALTER TABLE hotel ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL');
+  }
+  if (!(await columnExists(conn, 'hotel_administrators', 'cognito_username'))) {
+    await conn.query('ALTER TABLE hotel_administrators ADD COLUMN cognito_username VARCHAR(255) NULL AFTER cognito_sub');
+  }
+  if (!(await columnExists(conn, 'guest', 'cognito_sub'))) {
+    await conn.query('ALTER TABLE guest ADD COLUMN cognito_sub VARCHAR(255) NULL AFTER email');
+  }
+  if (!(await indexExists(conn, 'guest', 'uq_guest_cognito_sub'))) {
+    await conn.query('ALTER TABLE guest ADD UNIQUE KEY uq_guest_cognito_sub (cognito_sub)');
+  }
+  if (!(await indexExists(conn, 'hotel_administrators', 'uq_hotel_administrator_cognito_sub'))) {
+    await conn.query('ALTER TABLE hotel_administrators ADD UNIQUE KEY uq_hotel_administrator_cognito_sub (cognito_sub)');
+  }
+}
+
+function migrationPlanFor(event) {
+  return {
+    bootstrapBaseSchema: event.RequestType === 'Create',
+    applyPartnerMigration: event.RequestType !== 'Delete',
   };
-
-  return new Promise((resolve, reject) => {
-    const req = https.request(options, resolve);
-    req.on('error', reject);
-    req.write(responseBody);
-    req.end();
-  });
 }
 
 exports.handler = async (event) => {
   console.log('Event:', JSON.stringify(event));
 
-  // Only run migration on CREATE or UPDATE (not DELETE)
+  const physicalResourceId = event.PhysicalResourceId || 'roomhop-db-migration';
+
+  // The CDK custom-resources.Provider framework sends the CloudFormation
+  // response. The handler only returns a PhysicalResourceId and must not PUT
+  // directly to event.ResponseURL.
   if (event.RequestType === 'Delete') {
-    await sendResponse(event, 'SUCCESS', 'No migration needed for Delete');
-    return;
+    return { PhysicalResourceId: physicalResourceId };
   }
 
+  let conn;
   try {
     // Get DB credentials from Secrets Manager
     const sm = new SecretsManagerClient({});
@@ -236,7 +309,7 @@ exports.handler = async (event) => {
     const creds = JSON.parse(secret.SecretString);
 
     // Connect to MySQL
-    const conn = await mysql.createConnection({
+    conn = await mysql.createConnection({
       host: creds.host,
       port: creds.port,
       user: creds.username,
@@ -248,49 +321,79 @@ exports.handler = async (event) => {
 
     console.log('Connected to RDS, running migration...');
 
-    // Run migration DDL
-    await conn.query(MIGRATION_SQL);
-    console.log('Migration SQL executed successfully');
+    const migrationVersion = event.ResourceProperties?.migrationVersion || 'unknown';
 
-    // Run seed data (static: hotels, rooms, guests, images)
-    await conn.query(SEED_SQL);
-    console.log('Seed SQL executed successfully');
+    // A brand-new RDS database always needs the complete base schema, whatever
+    // the latest incremental migration version happens to be. Updates must not
+    // replay the destructive bootstrap migration and erase application data.
+    const migrationPlan = migrationPlanFor(event);
+    // An RDS replacement can present an empty database during a CloudFormation
+    // UPDATE. Detect that state so the new database is bootstrapped without
+    // ever replaying the destructive migration over an existing schema.
+    const needsBootstrap = migrationPlan.bootstrapBaseSchema
+      || !(await tableExists(conn, 'hotel'));
+    if (needsBootstrap) {
+      await conn.query(MIGRATION_SQL);
+      console.log('Migration SQL executed successfully');
 
-    // Generate 30-day rates and inventory dynamically
-    // (avoids DELIMITER/stored procedure which doesn't work with multipleStatements)
-    console.log('Generating 30-day rates and inventory...');
-    const roomTypeConfig = [
-      // [hotel_id, room_type_id, nightly_rate, total_inventory]
-      [1, 1, 120.00, 3],
-      [1, 2, 150.00, 2],
-      [1, 3, 250.00, 1],
-      [2, 4, 200.00, 4],
-      [2, 5, 450.00, 2],
-      [2, 6, 900.00, 1],
-      [3, 7, 175.00, 3],
-      [3, 8, 220.00, 2],
-    ];
+      // Run seed data (static: hotels, rooms, guests, images)
+      await conn.query(SEED_SQL);
+      console.log('Seed SQL executed successfully');
 
-    for (let i = 0; i < 30; i++) {
-      for (const [hotelId, roomTypeId, rate, inventory] of roomTypeConfig) {
-        await conn.query(
-          `INSERT IGNORE INTO room_type_rate (hotel_id, room_type_id, date, nightly_rate) VALUES (?, ?, CURDATE() + INTERVAL ? DAY, ?)`,
-          [hotelId, roomTypeId, i, rate]
-        );
-        await conn.query(
-          `INSERT IGNORE INTO room_type_inventory (hotel_id, room_type_id, date, total_inventory, total_reserved) VALUES (?, ?, CURDATE() + INTERVAL ? DAY, ?, 0)`,
-          [hotelId, roomTypeId, i, inventory]
-        );
+      // Generate 30-day rates and inventory dynamically
+      // (avoids DELIMITER/stored procedure which doesn't work with multipleStatements)
+      console.log('Generating 30-day rates and inventory...');
+      const roomTypeConfig = [
+        // [hotel_id, room_type_id, nightly_rate, total_inventory]
+        [1, 1, 120.00, 3],
+        [1, 2, 150.00, 2],
+        [1, 3, 250.00, 1],
+        [2, 4, 200.00, 4],
+        [2, 5, 450.00, 2],
+        [2, 6, 900.00, 1],
+        [3, 7, 175.00, 3],
+        [3, 8, 220.00, 2],
+      ];
+
+      for (let i = 0; i < 30; i++) {
+        for (const [hotelId, roomTypeId, rate, inventory] of roomTypeConfig) {
+          await conn.query(
+            `INSERT IGNORE INTO room_type_rate (hotel_id, room_type_id, date, nightly_rate) VALUES (?, ?, CURDATE() + INTERVAL ? DAY, ?)`,
+            [hotelId, roomTypeId, i, rate]
+          );
+          await conn.query(
+            `INSERT IGNORE INTO room_type_inventory (hotel_id, room_type_id, date, total_inventory, total_reserved) VALUES (?, ?, CURDATE() + INTERVAL ? DAY, ?, 0)`,
+            [hotelId, roomTypeId, i, inventory]
+          );
+        }
       }
+      console.log('Rates and inventory seeded for 30 days');
     }
-    console.log('Rates and inventory seeded for 30 days');
 
-    await conn.end();
+    // Idempotent incremental migration used both after a fresh bootstrap and
+    // when upgrading an existing stack from an earlier migration version.
+    if (migrationPlan.applyPartnerMigration) {
+      await applyIncrementalMigrations(conn);
+      console.log('Partner applications migration executed successfully');
+    }
+
     console.log('Database migration complete');
 
-    await sendResponse(event, 'SUCCESS', 'Migration completed successfully');
+    return {
+      PhysicalResourceId: physicalResourceId,
+      Data: { migrationVersion },
+    };
   } catch (err) {
     console.error('Migration failed:', err);
-    await sendResponse(event, 'FAILED', err.message);
+    throw err;
+  } finally {
+    if (conn) {
+      await conn.end();
+    }
   }
 };
+
+exports.migrationPlanFor = migrationPlanFor;
+exports.tableExists = tableExists;
+exports.columnExists = columnExists;
+exports.indexExists = indexExists;

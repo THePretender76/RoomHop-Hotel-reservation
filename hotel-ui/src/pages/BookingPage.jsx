@@ -1,9 +1,9 @@
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useBooking } from '../hooks/useBooking';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import { isAuthEnabled } from '../auth/amplifyConfig';
-import { IMAGES_BASE } from '../config';
+import { FALLBACK_IMAGE } from '../config';
 import styles from './BookingPage.module.css';
 
 const NATIONALITIES = [
@@ -35,7 +35,9 @@ export default function BookingPage() {
         sessionStorage.removeItem('rh_pending_booking');
         return JSON.parse(saved);
       }
-    } catch {}
+    } catch {
+      // Treat unavailable or malformed session storage as an empty state.
+    }
     return {};
   })();
 
@@ -105,7 +107,7 @@ export default function BookingPage() {
       await submit({
         hotel_id: hotel.hotel_id,
         room_type_id: roomType.room_type_id,
-        guest_id: 1,
+        guest_id: 1, // Legacy local API compatibility; ignored by the authenticated AWS API.
         start_date: checkIn,
         end_date: checkOut,
         room_count: 1,
@@ -296,9 +298,10 @@ export default function BookingPage() {
           <h2 className={styles.sectionTitle}>Hotel &amp; Room Summary</h2>
           <div className={styles.summaryHeader}>
             <img
-              src={hotel.primary_image_url || `${IMAGES_BASE}/placeholder_image/hotel-1.jpg`}
+              src={hotel.primary_image_url || FALLBACK_IMAGE}
               alt={hotel.name}
               className={styles.summaryImage}
+              onError={(event) => { event.currentTarget.src = FALLBACK_IMAGE; }}
             />
             <div className={styles.summaryInfo}>
               <h1 className={styles.hotelName}>{hotel.name}</h1>
@@ -339,9 +342,10 @@ export default function BookingPage() {
           <div className={styles.roomCard}>
             {roomType.image_url && (
               <img
-                src={roomType.image_url}
+                src={roomType.image_url || FALLBACK_IMAGE}
                 alt={roomType.name}
                 className={styles.roomCardImage}
+                onError={(event) => { event.currentTarget.src = FALLBACK_IMAGE; }}
               />
             )}
             <div className={styles.roomCardBody}>

@@ -22,8 +22,8 @@ async function createReservation(data, idempotencyKey) {
   // 1. Idempotency check (outside transaction, no lock needed)
   if (idempotencyKey) {
     const [existing] = await db.query(
-      'SELECT * FROM reservation WHERE idempotency_key = ? LIMIT 1',
-      [idempotencyKey]
+      'SELECT * FROM reservation WHERE idempotency_key = ? AND guest_id = ? LIMIT 1',
+      [idempotencyKey, guest_id]
     );
     if (existing.length > 0) {
       logger.debug('Idempotent replay', { idempotencyKey, reservationId: existing[0].reservation_id });
@@ -153,55 +153,50 @@ async function createReservation(data, idempotencyKey) {
 // -------------------------------------------------------
 // cancelReservation
 // -------------------------------------------------------
-async function cancelReservation(reservationId) {
-  // 1. Look up the reservation
-  const [rows] = await db.query(
-    'SELECT * FROM reservation WHERE reservation_id = ? LIMIT 1',
-    [reservationId]
-  );
-
-  if (rows.length === 0) {
-    throw { status: 404, message: 'Reservation not found' };
-  }
-
-  const reservation = rows[0];
-
-  // 2. Guard against already-cancelled reservations
-  if (reservation.status === 'CANCELLED') {
-    throw { status: 409, message: 'Reservation is already cancelled' };
-  }
-
-  // 3. Enforce 3-day cancellation window
-  const createdAt = new Date(reservation.created_at);
-  const now = new Date();
-  const diffMs = now - createdAt;
-  const diffDays = diffMs / (1000 * 60 * 60 * 24);
-
-  if (diffDays > 3) {
-    throw {
-      status: 403,
-      message: 'Cancellation window has closed (3-day limit exceeded)',
-    };
-  }
-
-  // 4. Begin transaction
+async function cancelReservation(reservationId, cognitoSub) {
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
 
-    // 5. UPDATE reservation status to CANCELLED
+    // Lock the reservation before checking its state so concurrent requests
+    // cannot both decrement inventory. Ownership is bound to the JWT subject.
+    const [rows] = await conn.query(
+      `SELECT r.*,
+              g.email AS guest_email,
+              CONCAT(g.first_name, ' ', g.last_name) AS guest_name,
+              h.name AS hotel_name,
+              rt.name AS room_type_name
+         FROM reservation r
+         JOIN guest g ON g.guest_id = r.guest_id
+         JOIN hotel h ON h.hotel_id = r.hotel_id
+         JOIN room_type rt ON rt.room_type_id = r.room_type_id
+        WHERE r.reservation_id = ? AND g.cognito_sub = ?
+        LIMIT 1
+        FOR UPDATE`,
+      [reservationId, cognitoSub]
+    );
+    if (!rows.length) throw { status: 404, message: 'Reservation not found' };
+
+    const reservation = rows[0];
+    if (reservation.status === 'CANCELLED') {
+      throw { status: 409, message: 'Reservation is already cancelled' };
+    }
+
+    const ageInDays = (Date.now() - new Date(reservation.created_at).getTime()) / 86400000;
+    if (ageInDays > 3) {
+      throw { status: 403, message: 'Cancellation window has closed (3-day limit exceeded)' };
+    }
+
     await conn.query(
       `UPDATE reservation
           SET status     = 'CANCELLED',
               updated_at = NOW()
-        WHERE reservation_id = ?`,
+        WHERE reservation_id = ? AND status = 'CONFIRMED'`,
       [reservationId]
     );
-
-    // 6. Decrement total_reserved for each inventory row
     await conn.query(
       `UPDATE room_type_inventory
-          SET total_reserved = total_reserved - ?
+          SET total_reserved = GREATEST(total_reserved - ?, 0)
         WHERE hotel_id     = ?
           AND room_type_id = ?
           AND date        >= ?
@@ -215,7 +210,6 @@ async function cancelReservation(reservationId) {
       ]
     );
 
-    // 7. Commit
     await conn.commit();
 
     logger.info('Reservation cancelled', { reservationId, roomCount: reservation.room_count, guestId: reservation.guest_id });

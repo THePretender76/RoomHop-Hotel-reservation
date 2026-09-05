@@ -11,6 +11,8 @@ export interface AnalyticsStackProps extends cdk.StackProps {
 
 export class AnalyticsStack extends cdk.Stack {
   public readonly athenaWorkgroup: athena.CfnWorkGroup;
+  public readonly athenaResultsBucket: s3.Bucket;
+  public readonly glueDatabaseName: string;
 
   constructor(scope: Construct, id: string, props: AnalyticsStackProps) {
     super(scope, id, props);
@@ -31,6 +33,7 @@ export class AnalyticsStack extends cdk.Stack {
         },
       ],
     });
+    this.athenaResultsBucket = athenaResultsBucket;
 
     // ─── Athena Workgroup ───────────────────────────────────────────────────────
     this.athenaWorkgroup = new athena.CfnWorkGroup(this, 'RoomHopWorkgroup', {
@@ -61,6 +64,7 @@ export class AnalyticsStack extends cdk.Stack {
         description: 'RoomHop analytics database for reservation event data',
       },
     });
+    this.glueDatabaseName = glueDatabase.ref;
 
     // ─── Glue Table: Reservations ───────────────────────────────────────────────
     // Points to S3 analytics bucket with Hive-style partitioning (year/month/day).
@@ -75,7 +79,7 @@ export class AnalyticsStack extends cdk.Stack {
           'classification': 'json',
           'projection.enabled': 'true',
           'projection.year.type': 'integer',
-          'projection.year.range': '2024,2030',
+          'projection.year.range': '2024,2050',
           'projection.month.type': 'integer',
           'projection.month.range': '1,12',
           'projection.month.digits': '2',
@@ -100,6 +104,7 @@ export class AnalyticsStack extends cdk.Stack {
             { name: 'guestEmail', type: 'string' },
             { name: 'guestName', type: 'string' },
             { name: 'hotelId', type: 'string' },
+            { name: 'hotelName', type: 'string' },
             { name: 'roomType', type: 'string' },
             { name: 'checkIn', type: 'string' },
             { name: 'checkOut', type: 'string' },

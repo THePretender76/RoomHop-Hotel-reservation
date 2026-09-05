@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "RoomHop analytics Lambda — SQS to S3 JSON writer",
   "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.600.0"
   }

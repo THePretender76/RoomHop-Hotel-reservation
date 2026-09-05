@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { IMAGES_BASE } from '../config';
+import { FALLBACK_IMAGE } from '../config';
 import SkeletonCard from '../components/SkeletonCard';
 import { useSearch } from '../hooks/useSearch';
 import styles from './SearchResultsPage.module.css';
@@ -15,7 +15,7 @@ export default function SearchResultsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { loading, results, error, skeletonCount, search } = useSearch();
-  const [hasSearched, setHasSearched] = useState(false);
+  const [hasSearched, setHasSearched] = useState(() => Boolean(searchParams.get('location')));
 
   // Form state from URL params
   const [city, setCity] = useState(searchParams.get('location') || '');
@@ -31,7 +31,6 @@ export default function SearchResultsPage() {
   useEffect(() => {
     const location = searchParams.get('location');
     if (location) {
-      setHasSearched(true);
       search({
         location,
         checkIn: searchParams.get('checkIn') || undefined,
@@ -256,10 +255,11 @@ export default function SearchResultsPage() {
                   <article key={hotel.hotel_id} className={styles.hotelGroupCard}>
                     <div className={styles.hotelGroupTop}>
                       <img
-                        src={hotel.primary_image_url || `${IMAGES_BASE}/placeholder_image/hotel-1.jpg`}
+                        src={hotel.primary_image_url || FALLBACK_IMAGE}
                         alt={hotel.name}
                         className={styles.hotelGroupImage}
                         loading="lazy"
+                        onError={(event) => { event.currentTarget.src = FALLBACK_IMAGE; }}
                       />
                       <div className={styles.hotelGroupOverlay} />
                       <div className={styles.hotelGroupInfo}>
@@ -276,10 +276,11 @@ export default function SearchResultsPage() {
                       {hotel.roomTypes.map((rt) => (
                         <div key={rt.room_type_id} className={styles.roomTypeRow}>
                           <img
-                            src={rt.image_url || hotel.primary_image_url || `${IMAGES_BASE}/placeholder_image/hotel-1.jpg`}
+                            src={rt.image_url || hotel.primary_image_url || FALLBACK_IMAGE}
                             alt={rt.name}
                             className={styles.roomTypeThumb}
                             loading="lazy"
+                            onError={(event) => { event.currentTarget.src = FALLBACK_IMAGE; }}
                           />
                           <div className={styles.roomTypeInfo}>
                             <span className={styles.roomTypeName}>{rt.name}</span>

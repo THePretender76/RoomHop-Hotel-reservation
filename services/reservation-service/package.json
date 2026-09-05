@@ -4,7 +4,8 @@
   "description": "RoomHop reservation service — AWS ECS deployment",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js"
+    "start": "node src/app.js",
+    "test": "node --test"
   },
   "dependencies": {
     "express": "^5.2.1",
@@ -12,6 +13,7 @@
     "cors": "^2.8.6",
     "winston": "^3.11.0",
     "@aws-sdk/client-secrets-manager": "^3.600.0",
-    "@aws-sdk/client-eventbridge": "^3.600.0"
+    "@aws-sdk/client-eventbridge": "^3.600.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.600.0"
   }
 }

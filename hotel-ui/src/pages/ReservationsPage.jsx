@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { apiGet, apiDelete } from '../api/client';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import { isAuthEnabled } from '../auth/amplifyConfig';
 import styles from './ReservationsPage.module.css';
 
@@ -22,7 +22,9 @@ export default function ReservationsPage() {
   // Auto-fetch reservations when user is authenticated
   useEffect(() => {
     if (userEmail) {
-      fetchReservations({ email: userEmail });
+      // The API derives reservation ownership from the verified JWT subject.
+      // Do not send an email or guest ID as an authorization selector.
+      fetchReservations({});
     }
   }, [userEmail]);
 

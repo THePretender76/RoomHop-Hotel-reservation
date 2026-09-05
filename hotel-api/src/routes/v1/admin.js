@@ -1,90 +1,97 @@
+'use strict';
+
 const express = require('express');
-const router = express.Router();
 const adminService = require('../../services/adminService');
 const { authenticate, requireGroup } = require('../../middleware/auth');
 
+const router = express.Router();
 router.use(authenticate);
 
-router.post('/partners/applications', requireGroup('HotelPartnerPending'), async (req, res) => {
+function sendError(res, error, fallback) {
+  const status = error.status || 500;
+  console.error(fallback, error.message);
+  return res.status(status).json({
+    error: status >= 500 ? fallback : error.message,
+  });
+}
+
+router.post('/partners/applications', async (req, res) => {
   try {
-    const result = await adminService.createPartnerApplication({
-      ...req.body,
-      cognitoSub: req.user.sub,
-    });
-    res.status(201).json(result);
+    const result = await adminService.createPartnerApplication(req.body, req.user);
+    return res.status(201).json(result);
   } catch (error) {
-    console.error('Admin partner application failed', error.message);
-    res.status(400).json({ error: 'Unable to process partner application' });
+    return sendError(res, error, 'Unable to process partner application');
   }
 });
 
-router.post('/hotels/complete', requireGroup('HotelPartner'), async (req, res) => {
+router.get('/partners/applications/me', async (req, res) => {
   try {
-    const result = await adminService.createCompleteProperty(req.body);
-    res.status(201).json(result);
+    return res.json(await adminService.getOwnPartnerApplication(req.user.sub));
   } catch (error) {
-    console.error('Admin property creation failed', error.message);
-    res.status(400).json({ error: 'Unable to create property' });
+    return sendError(res, error, 'Unable to load partner application');
   }
 });
 
-router.get('/partners/applications', requireGroup('SuperAdmin'), async (req, res) => {
+router.get('/partners/applications', requireGroup('SuperAdmin'), async (_req, res) => {
   try {
-    const result = await adminService.getPartnerApplications();
-    res.json(result);
+    return res.json(await adminService.getPartnerApplications());
   } catch (error) {
-    console.error('Admin partner app listing failed', error.message);
-    res.status(400).json({ error: 'Unable to load applications' });
+    return sendError(res, error, 'Unable to load applications');
   }
 });
 
 router.put('/partners/applications/:id/review', requireGroup('SuperAdmin'), async (req, res) => {
   try {
-    const result = await adminService.reviewPartnerApplication(req.params.id, req.body.status);
-    res.json(result);
+    return res.json(await adminService.reviewPartnerApplication(req.params.id, req.body?.status));
   } catch (error) {
-    console.error('Admin partner review failed', error.message);
-    res.status(400).json({ error: 'Unable to review application' });
+    return sendError(res, error, 'Unable to review application');
+  }
+});
+
+router.post('/hotels/complete', requireGroup('HotelPartner'), async (req, res) => {
+  try {
+    const result = await adminService.createCompleteProperty(req.body, req.user.sub);
+    return res.status(201).json(result);
+  } catch (error) {
+    return sendError(res, error, 'Unable to create property');
   }
 });
 
 router.put('/hotels/:id', requireGroup('HotelPartner'), async (req, res) => {
   try {
-    const result = await adminService.updateHotelMetadata(req.params.id, req.body);
-    res.json(result);
+    return res.json(await adminService.updateHotelMetadata(req.params.id, req.body, req.user.sub));
   } catch (error) {
-    console.error('Hotel metadata update failed', error.message);
-    res.status(400).json({ error: 'Unable to update hotel metadata' });
+    return sendError(res, error, 'Unable to update hotel metadata');
   }
 });
 
 router.put('/room-types/:id', requireGroup('HotelPartner'), async (req, res) => {
   try {
-    const result = await adminService.updateRoomType(req.params.id, req.body);
-    res.json(result);
+    return res.json(await adminService.updateRoomType(req.params.id, req.body, req.user.sub));
   } catch (error) {
-    console.error('Room type update failed', error.message);
-    res.status(400).json({ error: 'Unable to update room type' });
+    return sendError(res, error, 'Unable to update room type');
   }
 });
 
 router.post('/hotels/:hotelId/rooms', requireGroup('HotelPartner'), async (req, res) => {
   try {
-    const result = await adminService.addRoomInventory(req.params.hotelId, req.body.roomTypeId, req.body);
-    res.status(201).json(result);
+    const result = await adminService.addRoomInventory(
+      req.params.hotelId,
+      req.body?.roomTypeId,
+      req.body,
+      req.user.sub
+    );
+    return res.status(201).json(result);
   } catch (error) {
-    console.error('Room inventory add failed', error.message);
-    res.status(400).json({ error: 'Unable to add room inventory' });
+    return sendError(res, error, 'Unable to add room inventory');
   }
 });
 
 router.delete('/hotels/:id', requireGroup('HotelPartner'), async (req, res) => {
   try {
-    const result = await adminService.deleteHotel(req.params.id);
-    res.json(result);
+    return res.json(await adminService.deleteHotel(req.params.id, req.user.sub));
   } catch (error) {
-    console.error('Hotel deletion failed', error.message);
-    res.status(400).json({ error: 'Unable to delete hotel' });
+    return sendError(res, error, 'Unable to delete hotel');
   }
 });
 

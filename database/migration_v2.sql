@@ -16,6 +16,18 @@ DROP TABLE IF EXISTS Chambres_Type;
 DROP TABLE IF EXISTS Hotel_Images;
 DROP TABLE IF EXISTS Hotels;
 
+-- Drop the current schema as this file is the destructive local bootstrap.
+DROP TABLE IF EXISTS hotel_admin_properties;
+DROP TABLE IF EXISTS hotel_administrators;
+DROP TABLE IF EXISTS reservation;
+DROP TABLE IF EXISTS room_type_inventory;
+DROP TABLE IF EXISTS room_type_rate;
+DROP TABLE IF EXISTS hotel_images;
+DROP TABLE IF EXISTS room;
+DROP TABLE IF EXISTS room_type;
+DROP TABLE IF EXISTS guest;
+DROP TABLE IF EXISTS hotel;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- =============================================
@@ -88,11 +100,16 @@ CREATE TABLE room_type_inventory (
 -- guest
 -- =============================================
 CREATE TABLE guest (
-    guest_id   INT PRIMARY KEY AUTO_INCREMENT,
-    first_name VARCHAR(100) NOT NULL,
-    last_name  VARCHAR(100) NOT NULL,
-    email      VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    guest_id      INT PRIMARY KEY AUTO_INCREMENT,
+    first_name    VARCHAR(100) NOT NULL,
+    last_name     VARCHAR(100) NOT NULL,
+    email         VARCHAR(255) NOT NULL UNIQUE,
+    cognito_sub   VARCHAR(255) NULL,
+    phone         VARCHAR(50),
+    date_of_birth DATE,
+    nationality   VARCHAR(100),
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_guest_cognito_sub (cognito_sub)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
@@ -130,6 +147,7 @@ CREATE TABLE hotel_images (
 CREATE TABLE hotel_administrators (
     admin_id              INT PRIMARY KEY AUTO_INCREMENT,
     cognito_sub           VARCHAR(255) NOT NULL,
+    cognito_username      VARCHAR(255) NULL,
     company_name          VARCHAR(255) NOT NULL,
     tax_id                VARCHAR(100) NOT NULL,
     full_name             VARCHAR(200) NOT NULL,
@@ -143,7 +161,17 @@ CREATE TABLE hotel_administrators (
     hotel_id              INT NULL,
     created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_hotel_administrator_cognito_sub (cognito_sub),
     FOREIGN KEY (hotel_id) REFERENCES hotel(hotel_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE hotel_admin_properties (
+    admin_id   INT NOT NULL,
+    hotel_id   INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (admin_id, hotel_id),
+    FOREIGN KEY (admin_id) REFERENCES hotel_administrators(admin_id) ON DELETE CASCADE,
+    FOREIGN KEY (hotel_id) REFERENCES hotel(hotel_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================

@@ -24,12 +24,12 @@ export class DatabaseStack extends cdk.Stack {
 
     const { vpc, securityGroups } = props;
 
-    // ─── RDS MySQL 8.0 Multi-AZ ─────────────────────────────────────────────────
+    // ─── RDS MySQL 8.0 Single-AZ (intentional project constraint) ──────────
     // Credentials auto-generated and stored in Secrets Manager.
     // Placed in private isolated subnets — no public accessibility.
     const dbInstance = new rds.DatabaseInstance(this, 'RoomHopDb', {
       engine: rds.DatabaseInstanceEngine.mysql({
-        version: rds.MysqlEngineVersion.VER_8_0,
+        version: rds.MysqlEngineVersion.VER_8_0_46,
       }),
       instanceType: ec2.InstanceType.of(
         ec2.InstanceClass.T3,
@@ -55,11 +55,13 @@ export class DatabaseStack extends cdk.Stack {
       enablePerformanceInsights: true,
       parameterGroup: new rds.ParameterGroup(this, 'DbParamGroup', {
         engine: rds.DatabaseInstanceEngine.mysql({
-          version: rds.MysqlEngineVersion.VER_8_0,
+          version: rds.MysqlEngineVersion.VER_8_0_46,
         }),
         parameters: {
           character_set_server: 'utf8mb4',
           collation_server: 'utf8mb4_unicode_ci',
+          binlog_format: 'ROW',
+          binlog_row_image: 'FULL',
         },
       }),
     });
@@ -70,9 +72,14 @@ export class DatabaseStack extends cdk.Stack {
     // ─── Database Migration Lambda ──────────────────────────────────────────────
     // Runs migration SQL on stack CREATE. Uses a Custom Resource so it executes
     // automatically during deployment without manual intervention.
+    const migrationLogGroup = new logs.LogGroup(this, 'DbMigrationLogs', {
+      logGroupName: `/aws/lambda/${CONFIG.projectName}-db-migration`,
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
     const migrationLambda = new lambda.Function(this, 'DbMigrationFn', {
       functionName: `${CONFIG.projectName}-db-migration`,
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../../services/lambda/db-migration')),
       timeout: cdk.Duration.minutes(5),
@@ -84,7 +91,7 @@ export class DatabaseStack extends cdk.Stack {
         DB_SECRET_ARN: dbInstance.secret!.secretArn,
         DB_NAME: CONFIG.rds.databaseName,
       },
-      logRetention: logs.RetentionDays.ONE_WEEK,
+      logGroup: migrationLogGroup,
     });
 
     // Grant the migration Lambda access to read the DB secret
@@ -98,9 +105,14 @@ export class DatabaseStack extends cdk.Stack {
     );
 
     // Custom Resource Provider
+    const migrationProviderLogs = new logs.LogGroup(this, 'DbMigrationProviderLogs', {
+      logGroupName: `/aws/lambda/${CONFIG.projectName}-db-migration-provider`,
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
     const migrationProvider = new cr.Provider(this, 'DbMigrationProvider', {
       onEventHandler: migrationLambda,
-      logRetention: logs.RetentionDays.ONE_WEEK,
+      logGroup: migrationProviderLogs,
     });
 
     // Custom Resource — triggers the migration Lambda on stack CREATE
@@ -108,7 +120,7 @@ export class DatabaseStack extends cdk.Stack {
       serviceToken: migrationProvider.serviceToken,
       properties: {
         // Change this value to force re-run of migration on next deploy
-        migrationVersion: '4',
+        migrationVersion: '7',
       },
     });
 

@@ -3,10 +3,13 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import * as events from 'aws-cdk-lib/aws-events';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as xray from 'aws-cdk-lib/aws-xray';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as opensearch from 'aws-cdk-lib/aws-opensearchservice';
+import * as path from 'path';
 import { Construct } from 'constructs';
 import { CONFIG } from './config';
 import { SecurityGroups } from './network-stack';
@@ -15,52 +18,54 @@ export interface ComputeStackProps extends cdk.StackProps {
   vpc: ec2.Vpc;
   securityGroups: SecurityGroups;
   dbSecret: secretsmanager.ISecret;
-  dbEndpoint: string;
-  opensearchEndpoint: string;
+  searchDomain: opensearch.IDomain;
+  eventBus: events.IEventBus;
+  userPool: cognito.IUserPool;
+  userPoolClient: cognito.IUserPoolClient;
+}
+
+interface ServiceDefinition {
+  readonly id: string;
+  readonly serviceName: string;
+  readonly imageDirectory: string;
+  readonly config: { cpu: number; memory: number; desiredCount: number };
+  readonly taskRole: iam.Role;
+  readonly environment: Record<string, string>;
 }
 
 export class ComputeStack extends cdk.Stack {
   public readonly alb: elbv2.ApplicationLoadBalancer;
   public readonly albListener: elbv2.ApplicationListener;
+  public readonly cluster: ecs.Cluster;
+  public readonly searchRepository: ecr.Repository;
+  public readonly reservationRepository: ecr.Repository;
+  public readonly xrayRepository: ecr.Repository;
+  public readonly searchService: ecs.FargateService;
+  public readonly reservationService: ecs.FargateService;
 
   constructor(scope: Construct, id: string, props: ComputeStackProps) {
     super(scope, id, props);
 
-    const { vpc, securityGroups, dbSecret, dbEndpoint, opensearchEndpoint } = props;
+    const {
+      vpc,
+      securityGroups,
+      dbSecret,
+      searchDomain,
+      eventBus,
+      userPool,
+      userPoolClient,
+    } = props;
 
-    // ─── ECR Repositories ───────────────────────────────────────────────────────
-    const searchRepo = new ecr.Repository(this, 'SearchServiceRepo', {
-      repositoryName: `${CONFIG.projectName}/search-service`,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      emptyOnDelete: true,
-      imageScanOnPush: true,
-    });
+    this.searchRepository = this.createRepository('SearchServiceRepo', 'search-service');
+    this.reservationRepository = this.createRepository('ReservationServiceRepo', 'reservation-service');
+    this.xrayRepository = this.createRepository('XRayDaemonRepo', 'xray-daemon');
 
-    const reservationRepo = new ecr.Repository(this, 'ReservationServiceRepo', {
-      repositoryName: `${CONFIG.projectName}/reservation-service`,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      emptyOnDelete: true,
-      imageScanOnPush: true,
-    });
-
-    // ─── ECR Repo for X-Ray daemon (mirrored from ECR Public before deploy) ────
-    // public.ecr.aws/xray/aws-xray-daemon is NOT accessible from a private VPC.
-    // Run scripts/mirror-xray-to-ecr.ps1 before deploying this stack.
-    const xrayRepo = new ecr.Repository(this, 'XRayDaemonRepo', {
-      repositoryName: `${CONFIG.projectName}/xray-daemon`,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      emptyOnDelete: true,
-    });
-
-    // ─── ECS Cluster ────────────────────────────────────────────────────────────
-    const cluster = new ecs.Cluster(this, 'RoomHopCluster', {
+    this.cluster = new ecs.Cluster(this, 'RoomHopCluster', {
       vpc,
       clusterName: `${CONFIG.projectName}-cluster`,
-      containerInsights: true,
+      containerInsightsV2: ecs.ContainerInsights.ENHANCED,
     });
 
-    // ─── Internal ALB ───────────────────────────────────────────────────────────
-    // Internal ALB — not internet-facing. Receives traffic from API Gateway VPC Link.
     this.alb = new elbv2.ApplicationLoadBalancer(this, 'InternalAlb', {
       vpc,
       internetFacing: false,
@@ -69,7 +74,6 @@ export class ComputeStack extends cdk.Stack {
       loadBalancerName: `${CONFIG.projectName}-internal-alb`,
     });
 
-    // Default listener on port 80
     this.albListener = this.alb.addListener('HttpListener', {
       port: 80,
       protocol: elbv2.ApplicationProtocol.HTTP,
@@ -79,207 +83,215 @@ export class ComputeStack extends cdk.Stack {
       }),
     });
 
-    // ─── Shared Task Execution Role ─────────────────────────────────────────────
-    const taskExecutionRole = new iam.Role(this, 'TaskExecutionRole', {
+    const executionRole = new iam.Role(this, 'TaskExecutionRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy'),
       ],
     });
+    dbSecret.grantRead(executionRole);
 
-    // Allow pulling secrets from Secrets Manager
-    dbSecret.grantRead(taskExecutionRole);
-    // Allow pulling all ECR repos (search, reservation, xray-daemon)
-    searchRepo.grantPull(taskExecutionRole);
-    reservationRepo.grantPull(taskExecutionRole);
-    xrayRepo.grantPull(taskExecutionRole);
-
-    // ─── Shared Task Role ───────────────────────────────────────────────────────
-    const taskRole = new iam.Role(this, 'TaskRole', {
+    const searchTaskRole = new iam.Role(this, 'SearchTaskRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
-    // Grant access to read DB secret at runtime
-    dbSecret.grantRead(taskRole);
-    // Grant access to publish events to EventBridge
-    taskRole.addToPolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: ['events:PutEvents'],
-      resources: [`arn:aws:events:${CONFIG.region}:*:event-bus/${CONFIG.projectName}-events`],
+    dbSecret.grantRead(searchTaskRole);
+    searchTaskRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['es:ESHttpGet', 'es:ESHttpHead', 'es:ESHttpPost'],
+      resources: [`${searchDomain.domainArn}/*`],
     }));
-
-    // Grant X-Ray write access so the X-Ray daemon sidecar can send traces
-    taskRole.addManagedPolicy(
+    searchTaskRole.addManagedPolicy(
       iam.ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess')
     );
+    this.grantEcsExec(searchTaskRole);
 
-    // ─── X-Ray Sampling Rule ────────────────────────────────────────────────────
-    // Sample 10% of requests in production to control cost
-    new xray.CfnSamplingRule(this, 'XRaySamplingRule', {
-      samplingRule: {
-        ruleName: `${CONFIG.projectName}-sampling`,
-        priority: 1000,
-        reservoirSize: 1,   // 1 request/second always traced
-        fixedRate: 0.1,     // 10% of remaining requests
-        host: '*',
-        httpMethod: '*',
-        resourceArn: '*',
-        serviceName: `${CONFIG.projectName}*`,
-        serviceType: '*',
-        urlPath: '*',
-        version: 1,
-      },
+    const reservationTaskRole = new iam.Role(this, 'ReservationTaskRole', {
+      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
+    dbSecret.grantRead(reservationTaskRole);
+    eventBus.grantPutEventsTo(reservationTaskRole);
+    reservationTaskRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        'cognito-idp:AdminAddUserToGroup',
+        'cognito-idp:AdminRemoveUserFromGroup',
+        'cognito-idp:AdminUpdateUserAttributes',
+      ],
+      resources: [userPool.userPoolArn],
+    }));
+    reservationTaskRole.addManagedPolicy(
+      iam.ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess')
+    );
+    this.grantEcsExec(reservationTaskRole);
 
-    // ─── Common environment variables ───────────────────────────────────────────
-    const commonEnv: { [key: string]: string } = {
+    const commonEnvironment = {
       DB_SECRET_ARN: dbSecret.secretArn,
       DB_NAME: CONFIG.rds.databaseName,
-      OPENSEARCH_ENDPOINT: `https://${opensearchEndpoint}`,
       AWS_REGION: CONFIG.region,
       NODE_ENV: 'production',
     };
 
-    // ─── Helper: Create Fargate Service ─────────────────────────────────────────
-    const createService = (
-      serviceName: string,
-      repo: ecr.Repository,
-      serviceConfig: { cpu: number; memory: number; desiredCount: number },
-      pathPattern: string
-    ) => {
-      const logGroup = new logs.LogGroup(this, `${serviceName}Logs`, {
-        logGroupName: `/ecs/${CONFIG.projectName}/${serviceName}`,
-        retention: logs.RetentionDays.ONE_MONTH,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      });
-
-      const taskDefinition = new ecs.FargateTaskDefinition(this, `${serviceName}TaskDef`, {
-        cpu: serviceConfig.cpu,
-        memoryLimitMiB: serviceConfig.memory,
-        executionRole: taskExecutionRole,
-        taskRole,
-      });
-
-      taskDefinition.addContainer(`${serviceName}Container`, {
-        image: ecs.ContainerImage.fromEcrRepository(repo, 'latest'),
-        logging: ecs.LogDrivers.awsLogs({
-          streamPrefix: serviceName,
-          logGroup,
-        }),
-        environment: commonEnv,
-        portMappings: [{ containerPort: 3000 }],
-        healthCheck: {
-          command: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1'],
-          interval: cdk.Duration.seconds(30),
-          timeout: cdk.Duration.seconds(5),
-          retries: 3,
-          startPeriod: cdk.Duration.seconds(60),
-        },
-      });
-
-      // ─── X-Ray Daemon Sidecar ──────────────────────────────────────────────────
-      // Image pulled from private ECR (mirrored from public.ecr.aws/xray/aws-xray-daemon).
-      // Run scripts/mirror-xray-to-ecr.ps1 before first deploy.
-      taskDefinition.addContainer(`${serviceName}XRayDaemon`, {
-        image: ecs.ContainerImage.fromEcrRepository(xrayRepo, 'latest'),
-        essential: false,
-        portMappings: [{ containerPort: 2000, protocol: ecs.Protocol.UDP }],
-        logging: ecs.LogDrivers.awsLogs({
-          streamPrefix: `${serviceName}-xray`,
-          logGroup,
-        }),
-        cpu: 32,
-        memoryReservationMiB: 256,
-      });
-
-      const service = new ecs.FargateService(this, `${serviceName}Service`, {
-        cluster,
-        taskDefinition,
-        desiredCount: serviceConfig.desiredCount,
-        securityGroups: [securityGroups.ecsSg],
-        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
-        assignPublicIp: false,
-        serviceName: `${CONFIG.projectName}-${serviceName}`,
-      });
-
-      // ─── Auto Scaling ─────────────────────────────────────────────────────────
-      const scaling = service.autoScaleTaskCount({
-        minCapacity: 1,
-        maxCapacity: 4,
-      });
-      scaling.scaleOnCpuUtilization(`${serviceName}CpuScaling`, {
-        targetUtilizationPercent: 60,
-        scaleInCooldown: cdk.Duration.seconds(60),
-        scaleOutCooldown: cdk.Duration.seconds(30),
-      });
-      scaling.scaleOnMemoryUtilization(`${serviceName}MemoryScaling`, {
-        targetUtilizationPercent: 70,
-        scaleInCooldown: cdk.Duration.seconds(60),
-        scaleOutCooldown: cdk.Duration.seconds(30),
-      });
-
-      // Target group for ALB path-based routing
-      const targetGroup = new elbv2.ApplicationTargetGroup(this, `${serviceName}Tg`, {
-        vpc,
-        port: 3000,
-        protocol: elbv2.ApplicationProtocol.HTTP,
-        targets: [service],
-        healthCheck: {
-          path: '/health',
-          interval: cdk.Duration.seconds(30),
-          healthyThresholdCount: 2,
-          unhealthyThresholdCount: 3,
-        },
-        targetGroupName: `${CONFIG.projectName}-${serviceName}`,
-      });
-
-      // Add path-based routing rule to the listener
-      new elbv2.ApplicationListenerRule(this, `${serviceName}Rule`, {
-        listener: this.albListener,
-        priority: pathPattern === '/v1/search*' ? 10 : pathPattern === '/v1/reservations*' ? 20 : 30,
-        conditions: [elbv2.ListenerCondition.pathPatterns([pathPattern])],
-        targetGroups: [targetGroup],
-      });
-
-      return service;
-    };
-
-    // ─── Create Services ────────────────────────────────────────────────────────
-    createService('search', searchRepo, CONFIG.ecs.searchService, '/v1/search*');
-    const reservationService = createService('reservation', reservationRepo, CONFIG.ecs.reservationService, '/v1/reservations*');
-
-    // ─── Admin routes → reservation service (same ECS task, different path) ────
-    // /v1/admin/* is handled by the same reservation-service container.
-    // We need a separate ALB rule at priority 25 (between search=10 and reservation=20).
-    const adminTargetGroup = new elbv2.ApplicationTargetGroup(this, 'AdminTg', {
-      vpc,
-      port: 3000,
-      protocol: elbv2.ApplicationProtocol.HTTP,
-      targets: [reservationService],
-      healthCheck: {
-        path: '/health',
-        interval: cdk.Duration.seconds(30),
-        healthyThresholdCount: 2,
-        unhealthyThresholdCount: 3,
+    const search = this.createService(vpc, securityGroups, executionRole, {
+      id: 'Search',
+      serviceName: 'search',
+      imageDirectory: path.join(__dirname, '../../services/search-service'),
+      config: CONFIG.ecs.searchService,
+      taskRole: searchTaskRole,
+      environment: {
+        ...commonEnvironment,
+        OPENSEARCH_ENDPOINT: `https://${searchDomain.domainEndpoint}`,
       },
-      targetGroupName: `${CONFIG.projectName}-admin`,
     });
 
+    const reservation = this.createService(vpc, securityGroups, executionRole, {
+      id: 'Reservation',
+      serviceName: 'reservation',
+      imageDirectory: path.join(__dirname, '../../services/reservation-service'),
+      config: CONFIG.ecs.reservationService,
+      taskRole: reservationTaskRole,
+      environment: {
+        ...commonEnvironment,
+        EVENT_BUS_NAME: eventBus.eventBusName,
+        COGNITO_USER_POOL_ID: userPool.userPoolId,
+        COGNITO_CLIENT_ID: userPoolClient.userPoolClientId,
+      },
+    });
+
+    this.searchService = search.service;
+    this.reservationService = reservation.service;
+
+    new elbv2.ApplicationListenerRule(this, 'SearchRule', {
+      listener: this.albListener,
+      priority: 10,
+      conditions: [elbv2.ListenerCondition.pathPatterns(['/v1/search*'])],
+      targetGroups: [search.targetGroup],
+    });
+    new elbv2.ApplicationListenerRule(this, 'ReservationRule', {
+      listener: this.albListener,
+      priority: 20,
+      conditions: [elbv2.ListenerCondition.pathPatterns(['/v1/reservations*'])],
+      targetGroups: [reservation.targetGroup],
+    });
     new elbv2.ApplicationListenerRule(this, 'AdminRule', {
       listener: this.albListener,
       priority: 25,
       conditions: [elbv2.ListenerCondition.pathPatterns(['/v1/admin*'])],
-      targetGroups: [adminTargetGroup],
+      targetGroups: [reservation.targetGroup],
     });
 
-    // ─── Outputs ────────────────────────────────────────────────────────────────
-    new cdk.CfnOutput(this, 'AlbDnsName', {
-      value: this.alb.loadBalancerDnsName,
-      description: 'Internal ALB DNS name',
+    new cdk.CfnOutput(this, 'AlbDnsName', { value: this.alb.loadBalancerDnsName });
+    new cdk.CfnOutput(this, 'ClusterName', { value: this.cluster.clusterName });
+    new cdk.CfnOutput(this, 'SearchRepositoryUri', { value: this.searchRepository.repositoryUri });
+    new cdk.CfnOutput(this, 'ReservationRepositoryUri', { value: this.reservationRepository.repositoryUri });
+    new cdk.CfnOutput(this, 'XRayRepositoryUri', { value: this.xrayRepository.repositoryUri });
+  }
+
+  private createRepository(id: string, name: string): ecr.Repository {
+    return new ecr.Repository(this, id, {
+      repositoryName: `${CONFIG.projectName}/${name}`,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      emptyOnDelete: true,
+      imageScanOnPush: true,
+      lifecycleRules: [{ maxImageCount: 15 }],
+    });
+  }
+
+  private grantEcsExec(role: iam.Role): void {
+    role.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        'ssmmessages:CreateControlChannel',
+        'ssmmessages:CreateDataChannel',
+        'ssmmessages:OpenControlChannel',
+        'ssmmessages:OpenDataChannel',
+      ],
+      resources: ['*'],
+    }));
+  }
+
+  private createService(
+    vpc: ec2.Vpc,
+    securityGroups: SecurityGroups,
+    executionRole: iam.Role,
+    definition: ServiceDefinition
+  ): { service: ecs.FargateService; targetGroup: elbv2.ApplicationTargetGroup } {
+    const logGroup = new logs.LogGroup(this, `${definition.id}Logs`, {
+      logGroupName: `/ecs/${CONFIG.projectName}/${definition.serviceName}`,
+      retention: logs.RetentionDays.ONE_MONTH,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    new cdk.CfnOutput(this, 'ClusterName', {
-      value: cluster.clusterName,
-      description: 'ECS cluster name',
+    const taskDefinition = new ecs.FargateTaskDefinition(this, `${definition.id}TaskDefinition`, {
+      cpu: definition.config.cpu,
+      memoryLimitMiB: definition.config.memory,
+      executionRole,
+      taskRole: definition.taskRole,
     });
+
+    taskDefinition.addContainer(`${definition.id}Container`, {
+      // CDK assets make the first deployment runnable before the CI/CD repos contain images.
+      image: ecs.ContainerImage.fromAsset(definition.imageDirectory),
+      logging: ecs.LogDrivers.awsLogs({ streamPrefix: definition.serviceName, logGroup }),
+      environment: definition.environment,
+      portMappings: [{ containerPort: 3000 }],
+      healthCheck: {
+        command: ['CMD-SHELL', 'curl -fsS http://localhost:3000/health || exit 1'],
+        interval: cdk.Duration.seconds(30),
+        timeout: cdk.Duration.seconds(5),
+        retries: 3,
+        startPeriod: cdk.Duration.seconds(60),
+      },
+    });
+
+    taskDefinition.addContainer(`${definition.id}XRayDaemon`, {
+      image: ecs.ContainerImage.fromAsset(path.join(__dirname, '../docker/xray')),
+      essential: false,
+      portMappings: [{ containerPort: 2000, protocol: ecs.Protocol.UDP }],
+      logging: ecs.LogDrivers.awsLogs({ streamPrefix: `${definition.serviceName}-xray`, logGroup }),
+      cpu: 32,
+      memoryReservationMiB: 256,
+    });
+
+    const service = new ecs.FargateService(this, `${definition.id}Service`, {
+      cluster: this.cluster,
+      taskDefinition,
+      desiredCount: definition.config.desiredCount,
+      minHealthyPercent: 100,
+      maxHealthyPercent: 200,
+      circuitBreaker: { rollback: true },
+      healthCheckGracePeriod: cdk.Duration.seconds(90),
+      securityGroups: [securityGroups.ecsSg],
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      assignPublicIp: false,
+      serviceName: `${CONFIG.projectName}-${definition.serviceName}`,
+      enableExecuteCommand: true,
+    });
+
+    const scaling = service.autoScaleTaskCount({ minCapacity: 1, maxCapacity: 4 });
+    scaling.scaleOnCpuUtilization(`${definition.id}CpuScaling`, {
+      targetUtilizationPercent: 60,
+      scaleInCooldown: cdk.Duration.seconds(60),
+      scaleOutCooldown: cdk.Duration.seconds(30),
+    });
+    scaling.scaleOnMemoryUtilization(`${definition.id}MemoryScaling`, {
+      targetUtilizationPercent: 70,
+      scaleInCooldown: cdk.Duration.seconds(60),
+      scaleOutCooldown: cdk.Duration.seconds(30),
+    });
+
+    const targetGroup = new elbv2.ApplicationTargetGroup(this, `${definition.id}TargetGroup`, {
+      vpc,
+      port: 3000,
+      protocol: elbv2.ApplicationProtocol.HTTP,
+      targets: [service],
+      targetGroupName: `${CONFIG.projectName}-${definition.serviceName}`,
+      deregistrationDelay: cdk.Duration.seconds(30),
+      healthCheck: {
+        path: '/health',
+        interval: cdk.Duration.seconds(30),
+        timeout: cdk.Duration.seconds(5),
+        healthyThresholdCount: 2,
+        unhealthyThresholdCount: 3,
+      },
+    });
+
+    return { service, targetGroup };
   }
 }

@@ -4,6 +4,7 @@
   "bin": { "app": "bin/app.ts" },
   "scripts": {
     "build": "tsc",
+    "test": "node --test -r ts-node/register test/*.test.ts",
     "synth": "cdk synth",
     "deploy": "cdk deploy --all",
     "destroy": "cdk destroy --all"
@@ -11,10 +12,10 @@
   "devDependencies": {
     "typescript": "~5.4.0",
     "ts-node": "^10.9.2",
-    "aws-cdk": "^2.150.0"
+    "aws-cdk": "^2.1139.0"
   },
   "dependencies": {
-    "aws-cdk-lib": "^2.150.0",
+    "aws-cdk-lib": "^2.268.0",
     "constructs": "^10.3.0",
     "source-map-support": "^0.5.21"
   }

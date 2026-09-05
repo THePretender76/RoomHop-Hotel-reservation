@@ -1,5 +1,6 @@
 // Base URL — API Gateway in production, localhost for local dev
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const BASE_URL = import.meta.env.VITE_API_URL
+  || (import.meta.env.PROD ? globalThis.location.origin : 'http://localhost:3000');
 
 // Auth token getter — set by App.jsx to provide JWT from Cognito
 let tokenGetter = null;
@@ -16,6 +17,19 @@ async function getAuthHeaders() {
   } catch {
     return {};
   }
+}
+
+async function errorFrom(response) {
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {
+    // A proxy can return a plain-text or empty error body.
+  }
+  const error = new Error(data.error || response.statusText || `HTTP ${response.status}`);
+  error.status = response.status;
+  error.data = data;
+  return error;
 }
 
 /**
@@ -42,16 +56,7 @@ export async function apiGet(path, params = {}) {
   });
 
   if (!response.ok) {
-    let errorData = {};
-    try {
-      errorData = await response.json();
-    } catch {
-      // ignore JSON parse errors on error responses
-    }
-    const err = new Error(errorData.error || response.statusText);
-    err.status = response.status;
-    err.data = errorData;
-    throw err;
+    throw await errorFrom(response);
   }
 
   return response.json();
@@ -80,16 +85,7 @@ export async function apiPost(path, body = {}, headers = {}) {
   });
 
   if (!response.ok) {
-    let errorData = {};
-    try {
-      errorData = await response.json();
-    } catch {
-      // ignore JSON parse errors on error responses
-    }
-    const err = new Error(errorData.error || response.statusText);
-    err.status = response.status;
-    err.data = errorData;
-    throw err;
+    throw await errorFrom(response);
   }
 
   return response.json();
@@ -116,12 +112,7 @@ export async function apiPut(path, body = {}, headers = {}) {
   });
 
   if (!response.ok) {
-    let errorData = {};
-    try { errorData = await response.json(); } catch {}
-    const err = new Error(errorData.error || response.statusText);
-    err.status = response.status;
-    err.data = errorData;
-    throw err;
+    throw await errorFrom(response);
   }
   return response.json();
 }
@@ -138,12 +129,7 @@ export async function apiDelete(path) {
   });
 
   if (!response.ok) {
-    let errorData = {};
-    try { errorData = await response.json(); } catch {}
-    const err = new Error(errorData.error || response.statusText);
-    err.status = response.status;
-    err.data = errorData;
-    throw err;
+    throw await errorFrom(response);
   }
   return response.json();
 }

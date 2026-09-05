@@ -1,42 +1,68 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { signIn, signUp, signOut, confirmSignUp, getCurrentUser, fetchUserAttributes, fetchAuthSession } from 'aws-amplify/auth';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  signIn,
+  signUp,
+  signOut,
+  confirmSignUp,
+  getCurrentUser,
+  fetchUserAttributes,
+  fetchAuthSession,
+} from 'aws-amplify/auth';
 import { isAuthEnabled } from './amplifyConfig';
+import { AuthContext } from './useAuth';
 
-const AuthContext = createContext(null);
+const authEnabled = isAuthEnabled();
+
+async function loadCurrentUser() {
+  const [currentUser, attributes, session] = await Promise.all([
+    getCurrentUser(),
+    fetchUserAttributes(),
+    fetchAuthSession(),
+  ]);
+  const groups = session.tokens?.idToken?.payload?.['cognito:groups'] || [];
+  return { ...currentUser, attributes, groups };
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [partnerStatus, setPartnerStatusState] = useState('guest');
+  const [loading, setLoading] = useState(authEnabled);
+  const [localPartnerStatus, setLocalPartnerStatus] = useState('guest');
 
-  useEffect(() => {
-    if (!isAuthEnabled()) {
-      setLoading(false);
-      return;
-    }
-    checkUser();
-  }, []);
-
-  async function checkUser() {
+  const checkUser = useCallback(async () => {
     try {
-      const currentUser = await getCurrentUser();
-      const attrs = await fetchUserAttributes();
-      const session = await fetchAuthSession();
-      const groups = session.tokens?.idToken?.payload?.['cognito:groups'] || [];
-      setUser({ ...currentUser, attributes: attrs, groups });
+      const authenticatedUser = await loadCurrentUser();
+      setUser(authenticatedUser);
+      return authenticatedUser;
     } catch {
       setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!authEnabled) return undefined;
+    let active = true;
+    loadCurrentUser()
+      .then((authenticatedUser) => {
+        if (active) setUser(authenticatedUser);
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function login(email, password) {
     const result = await signIn({ username: email, password });
-    if (result.isSignedIn) {
-      await checkUser();
-    }
-    return result;
+    const authenticatedUser = result.isSignedIn ? await checkUser() : null;
+    return { ...result, user: authenticatedUser };
   }
 
   async function register(email, password, givenName, familyName) {
@@ -54,34 +80,41 @@ export function AuthProvider({ children }) {
   async function logout() {
     await signOut();
     setUser(null);
-    setPartnerStatusState('guest');
+    setLocalPartnerStatus('guest');
   }
 
-  async function getToken() {
-    if (!isAuthEnabled() || !user) return null;
+  const getToken = useCallback(async () => {
+    if (!authEnabled || !user) return null;
     try {
       const session = await fetchAuthSession();
       return session.tokens?.idToken?.toString() || null;
     } catch {
       return null;
     }
-  }
+  }, [user]);
 
-  function setPartnerStatus(value) {
-    setPartnerStatusState(value);
-  }
+  const groupStatus = user?.groups?.includes('HotelPartner')
+    ? 'approved'
+    : user?.groups?.includes('HotelPartnerPending')
+      ? 'pending'
+      : null;
+  const partnerStatus = groupStatus
+    || user?.attributes?.['custom:partner_status']
+    || localPartnerStatus;
 
-  const derivedPartnerStatus = user?.attributes?.['custom:partner_status'] || partnerStatus;
+  const value = {
+    user,
+    loading,
+    login,
+    register,
+    confirmRegistration,
+    logout,
+    getToken,
+    isAuthenticated: Boolean(user),
+    partnerStatus,
+    setPartnerStatus: setLocalPartnerStatus,
+    refreshUser: checkUser,
+  };
 
-  return (
-    <AuthContext.Provider value={{ user, loading, login, register, confirmRegistration, logout, getToken, isAuthenticated: !!user, partnerStatus: derivedPartnerStatus, setPartnerStatus }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

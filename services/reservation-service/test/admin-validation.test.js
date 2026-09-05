@@ -1,0 +1,90 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const {
+  normalizePartnerApplication,
+  normalizeCompleteProperty,
+} = require('../src/services/adminService');
+const {
+  decodeJwtPayload,
+  groupsFrom,
+} = require('../src/middleware/auth');
+const { assertPutEventsSucceeded } = require('../src/eventPublisher');
+
+function validApplication() {
+  return {
+    companyName: ' RoomHop Hotels ',
+    taxId: 'FR-123',
+    fullName: 'Ada Lovelace',
+    corporateEmail: 'ADA@EXAMPLE.COM',
+    phoneNumber: '+33 1 23 45 67 89',
+    headOfficeAddress: '1 Hotel Street, Paris',
+    estimatedProperties: '3',
+    primaryCity: 'Paris',
+    websiteUrl: 'https://example.com',
+    cognitoSub: 'untrusted-body-value',
+  };
+}
+
+test('partner payload uses the authenticated identity instead of a body subject', () => {
+  const result = normalizePartnerApplication(validApplication(), {
+    sub: 'trusted-sub',
+    username: 'trusted-username',
+  });
+  assert.equal(result.cognitoSub, 'trusted-sub');
+  assert.equal(result.cognitoUsername, 'trusted-username');
+  assert.equal(result.corporateEmail, 'ada@example.com');
+  assert.equal(result.estimatedProperties, 3);
+});
+
+test('partner payload rejects malformed email, URL, and property count', () => {
+  assert.throws(() => normalizePartnerApplication(
+    { ...validApplication(), corporateEmail: 'invalid' },
+    { sub: 's', username: 'u' }
+  ), /email is invalid/i);
+  assert.throws(() => normalizePartnerApplication(
+    { ...validApplication(), websiteUrl: 'javascript:alert(1)' },
+    { sub: 's', username: 'u' }
+  ), /http or https/i);
+  assert.throws(() => normalizePartnerApplication(
+    { ...validApplication(), estimatedProperties: 0 },
+    { sub: 's', username: 'u' }
+  ), /between 1 and 10000/i);
+});
+
+test('complete property validation normalizes numbers and room metadata', () => {
+  const result = normalizeCompleteProperty({
+    hotel: { name: 'H', location: 'Paris', description: 'D', stars: '4' },
+    roomTypes: [{
+      name: 'Suite',
+      maxOccupancy: '3',
+      nightlyRate: '250.50',
+      inventoryCount: '2',
+      amenities: [' WiFi ', ''],
+      inventoryRoomNumbers: ['101', '101', '102'],
+    }],
+  });
+  assert.equal(result.hotel.stars, 4);
+  assert.equal(result.roomTypes[0].nightlyRate, 250.5);
+  assert.deepEqual(result.roomTypes[0].amenities, ['WiFi']);
+  assert.deepEqual(result.roomTypes[0].roomNumbers, ['101', '102']);
+});
+
+test('JWT helpers decode Cognito claims and normalize groups', () => {
+  const payload = { sub: 'abc', 'cognito:groups': ['HotelPartner', 'Guest'] };
+  const token = `x.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.y`;
+  assert.deepEqual(decodeJwtPayload(token), payload);
+  assert.deepEqual(groupsFrom({ groups: 'HotelPartner, Guest' }), ['HotelPartner', 'Guest']);
+});
+
+test('EventBridge partial failures are treated as failures', () => {
+  assert.throws(() => assertPutEventsSucceeded({
+    FailedEntryCount: 1,
+    Entries: [{ ErrorCode: 'InternalFailure', ErrorMessage: 'retry' }],
+  }, 'PartnerApplicationSubmitted'), /InternalFailure/);
+  assert.doesNotThrow(() => assertPutEventsSucceeded({
+    FailedEntryCount: 0,
+    Entries: [{ EventId: 'event-1' }],
+  }, 'PartnerApplicationSubmitted'));
+});

@@ -4,74 +4,107 @@ import * as cdk from 'aws-cdk-lib';
 import { CONFIG } from '../lib/config';
 import { NetworkStack } from '../lib/network-stack';
 import { DatabaseStack } from '../lib/database-stack';
-import { ComputeStack } from '../lib/compute-stack';
+import { OpenSearchStack } from '../lib/opensearch-stack';
 import { AuthStack } from '../lib/auth-stack';
+import { EventsStack } from '../lib/events-stack';
+import { ComputeStack } from '../lib/compute-stack';
 import { ApiStack } from '../lib/api-stack';
 import { FrontendStack } from '../lib/frontend-stack';
-import { EventsStack } from '../lib/events-stack';
 import { AnalyticsStack } from '../lib/analytics-stack';
+import { MetabaseStack } from '../lib/metabase-stack';
+import { DmsStack } from '../lib/dms-stack';
 import { ObservabilityStack } from '../lib/observability-stack';
+import { PipelineStack } from '../lib/pipeline-stack';
 
 const app = new cdk.App();
+const env = { account: process.env.CDK_DEFAULT_ACCOUNT, region: CONFIG.region };
 
-const env = {
-  account: process.env.CDK_DEFAULT_ACCOUNT,
-  region: CONFIG.region,
-};
+const network = new NetworkStack(app, 'RoomHop-Network', { env });
 
-// Stack 1: Networking (VPC, Subnets, Endpoints, Security Groups)
-const networkStack = new NetworkStack(app, 'RoomHop-Network', { env });
-
-// Stack 2: Database (RDS Single-AZ, Secrets Manager)
-const databaseStack = new DatabaseStack(app, 'RoomHop-Database', {
+const database = new DatabaseStack(app, 'RoomHop-Database', {
   env,
-  vpc: networkStack.vpc,
-  securityGroups: networkStack.securityGroups,
+  vpc: network.vpc,
+  securityGroups: network.securityGroups,
 });
 
-// Stack 3: Compute (ECS Fargate, ALB, ECR) — search queries MySQL directly
-const computeStack = new ComputeStack(app, 'RoomHop-Compute', {
+const openSearch = new OpenSearchStack(app, 'RoomHop-OpenSearch', {
   env,
-  vpc: networkStack.vpc,
-  securityGroups: networkStack.securityGroups,
-  dbSecret: databaseStack.dbSecret,
-  dbEndpoint: databaseStack.dbEndpoint,
-  opensearchEndpoint: 'not-used', // OpenSearch skipped in iteration 1
+  vpc: network.vpc,
+  securityGroups: network.securityGroups,
 });
 
-// Stack 5: Authentication (Cognito)
-const authStack = new AuthStack(app, 'RoomHop-Auth', { env });
+const auth = new AuthStack(app, 'RoomHop-Auth', { env });
+const events = new EventsStack(app, 'RoomHop-Events', { env });
 
-// Stack 6: API Gateway (HTTP API, VPC Link, JWT Authorizer)
-const apiStack = new ApiStack(app, 'RoomHop-Api', {
+const compute = new ComputeStack(app, 'RoomHop-Compute', {
   env,
-  vpc: networkStack.vpc,
-  alb: computeStack.alb,
-  albListener: computeStack.albListener,
-  userPool: authStack.userPool,
-  userPoolClient: authStack.userPoolClient,
+  vpc: network.vpc,
+  securityGroups: network.securityGroups,
+  dbSecret: database.dbSecret,
+  searchDomain: openSearch.domain,
+  eventBus: events.eventBus,
+  userPool: auth.userPool,
+  userPoolClient: auth.userPoolClient,
 });
 
-// Stack 7: Frontend (S3, CloudFront, WAF)
-const frontendStack = new FrontendStack(app, 'RoomHop-Frontend', {
+const api = new ApiStack(app, 'RoomHop-Api', {
   env,
-  apiEndpoint: apiStack.apiEndpoint,
+  vpc: network.vpc,
+  securityGroups: network.securityGroups,
+  alb: compute.alb,
+  albListener: compute.albListener,
+  userPool: auth.userPool,
+  userPoolClient: auth.userPoolClient,
 });
 
-// Stack 8: Events (EventBridge, SQS, Lambda for notifications + analytics)
-const eventsStack = new EventsStack(app, 'RoomHop-Events', {
+const frontend = new FrontendStack(app, 'RoomHop-Frontend', {
   env,
-  vpc: networkStack.vpc,
-  securityGroups: networkStack.securityGroups,
+  apiEndpoint: api.apiEndpoint,
 });
 
-// Stack 9: Analytics (S3 data lake, Athena)
-const analyticsStack = new AnalyticsStack(app, 'RoomHop-Analytics', {
+const analytics = new AnalyticsStack(app, 'RoomHop-Analytics', {
   env,
-  analyticsBucket: eventsStack.analyticsBucket,
+  analyticsBucket: events.analyticsBucket,
 });
 
-// Stack 10: Observability (CloudTrail, IAM Access Analyzer)
+const metabase = new MetabaseStack(app, 'RoomHop-Metabase', {
+  env,
+  vpc: network.vpc,
+  securityGroups: network.securityGroups,
+  dbSecret: database.dbSecret,
+  dbEndpoint: database.dbEndpoint,
+  cluster: compute.cluster,
+  alb: compute.alb,
+  analyticsBucket: events.analyticsBucket,
+  athenaResultsBucket: analytics.athenaResultsBucket,
+  glueDatabaseName: analytics.glueDatabaseName,
+  wafAclArn: frontend.wafAclArn,
+});
+
+new DmsStack(app, 'RoomHop-DMS', {
+  env,
+  vpc: network.vpc,
+  securityGroups: network.securityGroups,
+  dbSecret: database.dbSecret,
+  opensearchEndpoint: openSearch.domainEndpoint,
+  opensearchArn: openSearch.domainArn,
+});
+
 new ObservabilityStack(app, 'RoomHop-Observability', { env });
+
+new PipelineStack(app, 'RoomHop-Pipeline', {
+  env,
+  searchRepository: compute.searchRepository,
+  reservationRepository: compute.reservationRepository,
+  xrayRepository: compute.xrayRepository,
+  metabaseRepository: metabase.metabaseRepository,
+  searchService: compute.searchService,
+  reservationService: compute.reservationService,
+  metabaseService: metabase.metabaseService,
+  websiteBucket: frontend.websiteBucket,
+  distribution: frontend.distribution,
+  userPool: auth.userPool,
+  userPoolClient: auth.userPoolClient,
+});
 
 app.synth();
