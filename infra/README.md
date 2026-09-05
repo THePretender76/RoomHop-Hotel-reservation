@@ -104,7 +104,7 @@ Les échecs SQS sont renvoyés individuellement pour être retentés puis placé
 Si l'e-mail n'arrive pas après un futur déploiement:
 
 - confirmer les identités SES et la région `us-east-1`;
-- inspecter `/aws/lambda/roomhop-notification-handler`;
+- inspecter `/roomhop/lambda/notification-handler`;
 - contrôler `roomhop-notification-dlq`;
 - vérifier que l'événement `PartnerApplicationSubmitted` se trouve dans l'archive EventBridge;
 - confirmer que `SENDER_EMAIL` correspond au paramètre vérifié.

@@ -23,7 +23,9 @@ export const CONFIG = {
     instanceCount: 1,
   },
   dms: {
-    instanceClass: 'dms.t3.micro',
+    // dms.t3.micro is no longer orderable in us-east-1. t3.small is the
+    // smallest available DMS 3.6.1 class in this region.
+    instanceClass: 'dms.t3.small',
     allocatedStorage: 20,
   },
   s3: {

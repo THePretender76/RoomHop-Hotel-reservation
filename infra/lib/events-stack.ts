@@ -104,7 +104,9 @@ export class EventsStack extends cdk.Stack {
     partnerRule.addTarget(new eventsTargets.SqsQueue(this.notificationQueue));
 
     const notificationLogGroup = new logs.LogGroup(this, 'NotificationLogGroup', {
-      logGroupName: `/aws/lambda/${CONFIG.projectName}-notification-handler`,
+      // Keep CDK-owned logs separate from conventional Lambda groups that may
+      // remain after an earlier deployment.
+      logGroupName: `/${CONFIG.projectName}/lambda/notification-handler`,
       retention: logs.RetentionDays.ONE_MONTH,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
@@ -136,7 +138,7 @@ export class EventsStack extends cdk.Stack {
     }));
 
     const analyticsLogGroup = new logs.LogGroup(this, 'AnalyticsLogGroup', {
-      logGroupName: `/aws/lambda/${CONFIG.projectName}-analytics-handler`,
+      logGroupName: `/${CONFIG.projectName}/lambda/analytics-handler`,
       retention: logs.RetentionDays.ONE_MONTH,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });

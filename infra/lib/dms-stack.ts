@@ -4,6 +4,8 @@ import * as dms from 'aws-cdk-lib/aws-dms';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Construct } from 'constructs';
 import { CONFIG } from './config';
 import { SecurityGroups } from './network-stack';
@@ -22,24 +24,19 @@ export class DmsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: DmsStackProps) {
     super(scope, id, props);
 
-    const dmsVpcRole = new iam.Role(this, 'DmsVpcRole', {
-      roleName: 'dms-vpc-role',
-      assumedBy: new iam.ServicePrincipal('dms.amazonaws.com'),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonDMSVPCManagementRole'),
-      ],
-    });
-
-    const dmsLogsRole = new iam.Role(this, 'DmsCloudWatchLogsRole', {
-      roleName: 'dms-cloudwatch-logs-role',
-      assumedBy: new iam.ServicePrincipal('dms.amazonaws.com'),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonDMSCloudWatchLogsRole'),
-      ],
-    });
+    // DMS uses these account-level service roles with fixed names. Reuse the
+    // standard roles when they already exist instead of trying to create a
+    // second CloudFormation-owned copy with the same physical name.
+    const dmsVpcRole = iam.Role.fromRoleName(this, 'DmsVpcRole', 'dms-vpc-role');
+    const dmsLogsRole = iam.Role.fromRoleName(
+      this,
+      'DmsCloudWatchLogsRole',
+      'dms-cloudwatch-logs-role'
+    );
 
     const secretAccessRole = new iam.Role(this, 'DmsSecretAccessRole', {
-      assumedBy: new iam.ServicePrincipal('dms.amazonaws.com'),
+      // Secrets-backed endpoints require the regional DMS service principal.
+      assumedBy: new iam.ServicePrincipal(`dms.${CONFIG.region}.amazonaws.com`),
     });
     props.dbSecret.grantRead(secretAccessRole);
 
@@ -94,17 +91,27 @@ export class DmsStack extends cdk.Stack {
     replicationInstance.addResourceDependency(subnetGroup);
     replicationInstance.node.addDependency(dmsVpcRole);
 
+    const rdsCaCertificate = new dms.CfnCertificate(this, 'RdsCaCertificate', {
+      certificateIdentifier: `${CONFIG.projectName}-rds-us-east-1-ca-rsa2048-g1`,
+      certificatePem: fs.readFileSync(
+        path.join(__dirname, '../certificates/rds-us-east-1-ca-rsa2048-g1.pem'),
+        'utf8'
+      ),
+    });
+
     const sourceEndpoint = new dms.CfnEndpoint(this, 'RdsSourceEndpoint', {
       endpointIdentifier: `${CONFIG.projectName}-mysql-source`,
       endpointType: 'source',
       engineName: 'mysql',
-      sslMode: 'require',
+      sslMode: 'verify-full',
+      certificateArn: rdsCaCertificate.attrCertificateArn,
       mySqlSettings: {
         secretsManagerSecretId: props.dbSecret.secretArn,
         secretsManagerAccessRoleArn: secretAccessRole.roleArn,
         eventsPollInterval: 5,
       },
     });
+    sourceEndpoint.addResourceDependency(rdsCaCertificate);
 
     const targetEndpoint = new dms.CfnEndpoint(this, 'OpenSearchTargetEndpoint', {
       endpointIdentifier: `${CONFIG.projectName}-opensearch-target`,
@@ -146,7 +153,9 @@ export class DmsStack extends cdk.Stack {
           FullLobMode: false,
           LimitedSizeLobMode: false,
           ParallelLoadThreads: 2,
+          ParallelLoadBufferSize: 100,
           ParallelApplyThreads: 2,
+          ParallelApplyBufferSize: 100,
         },
         FullLoadSettings: {
           TargetTablePrepMode: 'DROP_AND_CREATE',

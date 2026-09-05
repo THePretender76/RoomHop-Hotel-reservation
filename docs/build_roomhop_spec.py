@@ -25,7 +25,7 @@ ASSETS.mkdir(parents=True, exist_ok=True)
 
 DATE_FR = "5 septembre 2026"
 VERSION = "1.0"
-STATUS = "Référence de conception — code validé localement, non déployé"
+STATUS = "Référence de conception — code validé localement et recette AWS partielle"
 
 # standard_business_brief preset
 BLUE = "2E74B5"
@@ -553,7 +553,7 @@ def configure_header_footer(doc: Document) -> None:
     fp = footer.paragraphs[0]
     fp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     fp.paragraph_format.space_before = Pt(0)
-    r = fp.add_run("Document de référence — non déployé  |  Page ")
+    r = fp.add_run("Document de référence — recette AWS partielle  |  Page ")
     set_run_font(r, size=8, color=MUTED)
     add_field(fp, "PAGE")
 
@@ -792,7 +792,7 @@ def build_document() -> Path:
             ["Cohérence métier", "Transactions MySQL et verrous FOR UPDATE protègent le stock."],
             ["Résilience", "Files, DLQ, archive et fallback existent ; plusieurs composants sont mono-instance."],
             ["Sécurité", "Bon socle, mais ouverture par défaut des listeners ALB et validation des claims à renforcer."],
-            ["Notification", "Chaîne codée et testée ; réception SES non vérifiable sans déploiement/configuration."],
+            ["Notification", "Chaîne codée et testée ; infrastructure déployée partiellement, mais réception SES non confirmée."],
             ["Priorité", "Fermer les listeners, renforcer validations, observabilité et atomicité des événements."],
         ],
         [2200, 7160],
@@ -864,7 +864,7 @@ def build_document() -> Path:
     )
     add_label_para(doc, "Inclus. ", "Recherche, authentification, réservation, annulation, onboarding partenaire, revue, publication d’un établissement, notifications, analytics, développement local et architecture AWS.")
     add_label_para(doc, "Hors périmètre actuel. ", "Paiement en ligne, remboursement, multi-devise, PMS/channel manager, avis clients, fidélité, application mobile, facturation PDF serveur et tableaux de bord Metabase préconfigurés.")
-    add_callout(doc, "Niveau de maturité", "Prototype fonctionnel avancé / architecture de référence. Les composants sont codés et testés localement, mais aucune ressource AWS n’est déployée et aucun SLA ne peut être affirmé.")
+    add_callout(doc, "Niveau de maturité", "Prototype fonctionnel avancé / architecture de référence. Les composants sont codés et testés localement ; une recette AWS partielle a validé plusieurs stacks, ensuite détruits. Aucun SLA ne peut être affirmé.")
     add_source(doc, "README.md ; infra/README.md ; infra/bin/app.ts ; hotel-ui/src/App.jsx")
 
     # 5
@@ -875,7 +875,7 @@ def build_document() -> Path:
         ["RF-G02", "Filtrer par prix et équipements.", "Implémenté ; étoiles partiel"],
         ["RF-G03", "Exiger tarif et stock pour chaque nuit.", "Implémenté/testé"],
         ["RF-G04", "Utiliser OpenSearch puis MySQL en cas d’erreur.", "Implémenté/testé"],
-        ["RF-G05", "Créer, confirmer et ouvrir une session Cognito.", "Implémenté ; AWS non testé"],
+        ["RF-G05", "Créer, confirmer et ouvrir une session Cognito.", "Implémenté ; stack Auth déployé, parcours E2E non validé"],
         ["RF-G06", "Réserver sous identité JWT, jamais avec un guest_id client.", "Implémenté/testé"],
         ["RF-G07", "Calculer le montant côté serveur.", "Implémenté/testé"],
         ["RF-G08", "Éviter doublons et surréservation.", "Implémenté ; intégration réelle à ajouter"],
@@ -1042,7 +1042,7 @@ def build_document() -> Path:
         "La source d’autorité transactionnelle est MySQL. OpenSearch optimise la lecture ; DMS réplique les données en full-load puis CDC. Les commandes de réservation restent synchrones, tandis que notification et analytique sont découplées par événements et files. Le frontend et les images sont privés dans S3 et servis via CloudFront.",
         size=10,
     )
-    add_callout(doc, "État réel", "Le diagramme représente un end-state codé. Aucun domaine, cluster, bucket, pipeline ou base présenté ici n’existe encore dans AWS.")
+    add_callout(doc, "État réel", "Le diagramme représente un end-state codé. Une recette partielle a créé plusieurs composants dans us-east-1, puis ils ont été détruits. Il ne reste actuellement aucun domaine, cluster ou base RoomHop actif ; le pipeline complet n’a pas été validé.")
 
     # 12
     new_page(doc, state)
@@ -1151,14 +1151,16 @@ def build_document() -> Path:
     add_label_para(doc, "RDS. ", "MySQL 8.0.46, db.t3.medium, Single-AZ, 50 Gio extensibles à 200 Gio, chiffrement, sauvegarde sept jours, Performance Insights et secret généré.")
     add_label_para(doc, "Migration. ", "Une Lambda Node.js 24 dans les subnets isolés exécute un bootstrap idempotent et des incréments. DELETE est volontairement sans effet. La version de ressource personnalisée est 7.")
     add_label_para(doc, "Binlogs. ", "La procédure mysql.rds_set_configuration fixe la rétention à 24 heures. Cette fenêtre laisse DMS reprendre le CDC après une interruption courte ; elle doit dépasser la durée maximale de panne prévue.")
-    add_callout(doc, "Limite de preuve", "Le schéma et les plans de migration sont testés, mais aucune migration n’a été exécutée contre un RDS réel.")
+    add_callout(doc, "Preuve de déploiement", "Le stack Database et sa ressource personnalisée de migration ont été déployés avec succès contre un RDS réel pendant la recette éphémère. Les ressources ont ensuite été détruites.")
     add_source(doc, "infra/lib/database-stack.ts ; services/lambda/db-migration/index.js ; database/migration_v2.sql")
 
     # 16
     new_page(doc, state)
     add_page_title(doc, "13", "Recherche, DMS et fallback MySQL")
     add_label_para(doc, "Chemin principal. ", "Le service signe les requêtes OpenSearch avec SigV4, applique un timeout de cinq secondes, interroge des index séparés puis assemble hôtels, types, tarifs, stocks et images. La période doit être couverte nuit par nuit.")
-    add_label_para(doc, "Réplication. ", "DMS dms.t3.micro, 20 Gio, Single-AZ, exécute full-load-and-cdc depuis MySQL vers OpenSearch pour hotel, room_type, room_type_rate, room_type_inventory et hotel_images.")
+    add_label_para(doc, "Réplication. ", "DMS dms.t3.small, 20 Gio, Single-AZ, exécute full-load-and-cdc depuis MySQL vers OpenSearch pour hotel, room_type, room_type_rate, room_type_inventory et hotel_images. La classe t3.small remplace t3.micro, non commandable avec la version DMS utilisée dans us-east-1.")
+    add_label_para(doc, "Sécurité et intégration AWS. ", "L’endpoint source vérifie intégralement TLS avec sslMode verify-full et le certificat CA RDS us-east-1. Le stack réutilise les rôles de service de compte dms-vpc-role et dms-cloudwatch-logs-role afin d’éviter les conflits de noms CloudFormation ; l’accès au secret utilise le principal régional DMS.")
+    add_label_para(doc, "Réglages OpenSearch. ", "Les buffers ParallelLoadBufferSize et ParallelApplyBufferSize sont explicitement configurés pour la cible OpenSearch. Ces corrections compilent et sont synthétisables, mais le stack DMS complet n’a pas encore terminé un déploiement intégré réussi.")
     add_label_para(doc, "Fallback. ", "Si l’endpoint n’est pas configuré ou si OpenSearch lève une erreur, une requête SQL équivalente est exécutée sur la source d’autorité. La réponse annonce source: opensearch ou source: mysql.")
     add_code_block(
         doc,
@@ -1241,7 +1243,7 @@ def build_document() -> Path:
     add_callout(
         doc,
         "Exploitation SES",
-        "Avant toute recette : vérifier l’expéditeur, sortir de sandbox si nécessaire, configurer DKIM/SPF/DMARC, suivre bounces/complaints et alerter sur la DLQ.",
+        "Avant toute recette : vérifier l’expéditeur, sortir de sandbox si nécessaire, configurer DKIM/SPF/DMARC, suivre bounces/complaints et alerter sur la DLQ. Les diagnostics applicatifs se trouvent dans /roomhop/lambda/notification-handler et /roomhop/lambda/analytics-handler ; ces noms évitent les conflits avec d’anciens groupes /aws/lambda conservés.",
         fill=AMBER_FILL,
         accent=GOLD,
     )
@@ -1415,17 +1417,17 @@ def build_document() -> Path:
             ["Frontend", "10/10 tests, lint et build réussis."],
             ["Infrastructure", "5/5 tests d’architecture, TypeScript et synthèse de 13 stacks réussis."],
             ["Conteneurs", "4/4 images construites localement."],
-            ["AWS", "Aucun déploiement ; Cognito, SES, DMS, OpenSearch, réseau et pipeline non testés intégrés."],
+            ["AWS", "Recette éphémère partielle dans us-east-1 : Network, Auth, Events, Observability, Database, OpenSearch, Analytics et Compute déployés puis détruits. DMS n’a pas terminé ; Api, Frontend, Metabase et Pipeline n’ont pas été atteints."],
         ],
         [2800, 6560],
         font_size=9.2,
         first_col_bold=True,
     )
-    add_para(doc, "Checklist avant une première recette éphémère :", size=10.5, color=INK, bold=True)
+    add_para(doc, "Checklist avant la prochaine recette éphémère :", size=10.5, color=INK, bold=True)
     add_bullets(doc, [
         "Définir compte/région, bootstrap CDK et tags ; examiner cdk diff et coûts.",
         "Fermer les listeners ALB, renforcer JWT/validation serveur et corriger dates/filtre étoiles.",
-        "Vérifier SesSenderEmail, destinataires sandbox, DKIM et configuration des événements.",
+        "Vérifier SesSenderEmail, destinataires sandbox, DKIM, réception réelle du message et configuration des événements.",
         "Autoriser CodeConnections GitHub et décider qui déploie réellement les stacks.",
         "Charger les images, initialiser Metabase, connecter Athena et restreindre son accès.",
         "Exécuter tests E2E, concurrence MySQL réelle, panne OpenSearch, DLQ/replay et restauration.",
@@ -1448,12 +1450,12 @@ def build_document() -> Path:
         ("Fargate : Search + Reservation + Metabase", 0.0987),
         ("RDS MySQL db.t3.medium Single-AZ", 0.0680),
         ("OpenSearch t3.small.search, 1 nœud", 0.0360),
-        ("DMS dms.t3.micro", 0.0360),
+        ("DMS dms.t3.small Single-AZ", 0.0372),
         ("ALB interne, composante horaire", 0.0225),
         ("Stockage provisionné agrégé, ordre de grandeur", 0.0108),
     ]
     hourly = sum(v for _, v in rates)
-    assert round(hourly, 4) == 0.4920
+    assert round(hourly, 4) == 0.4932
     four_hours = hourly * 4
     five_hours = hourly * 5
     cost_rows = [[label, f"{value:.4f} USD/h", f"{value / hourly * 100:.1f} %"] for label, value in rates]
@@ -1488,7 +1490,7 @@ def build_document() -> Path:
     add_page_title(doc, "23", "Évaluation Well-Architected — méthode et synthèse")
     add_para(
         doc,
-        "Cette évaluation interne confronte le code, les templates synthétisés et les tests aux six piliers AWS. Elle n’est pas une revue officielle réalisée dans AWS Well-Architected Tool. En l’absence de déploiement, elle évalue l’intention et les garde-fous, pas les données d’exploitation.",
+        "Cette évaluation interne confronte le code, les templates synthétisés, les tests et les résultats de la recette AWS partielle aux six piliers AWS. Elle n’est pas une revue officielle réalisée dans AWS Well-Architected Tool. En l’absence de déploiement complet et de mesures durables, elle évalue surtout l’intention et les garde-fous, pas une exploitation de production.",
         size=10,
     )
     add_image(
@@ -1762,7 +1764,7 @@ def build_document() -> Path:
         size=8.6,
         color=MUTED,
     )
-    add_callout(doc, "Fin du document", "La prochaine révision doit intégrer les résultats d’un déploiement de recette, les mesures de charge, les preuves SES/DMS et les décisions prises sur les améliorations P0.")
+    add_callout(doc, "Fin du document", "La prochaine révision doit intégrer un déploiement DMS complet, la preuve de livraison SES, les mesures de charge et les décisions prises sur les améliorations P0. La recette éphémère partielle de septembre 2026 est désormais prise en compte.")
 
     doc.save(OUT)
     return OUT

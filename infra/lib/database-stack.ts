@@ -73,7 +73,9 @@ export class DatabaseStack extends cdk.Stack {
     // Runs migration SQL on stack CREATE. Uses a Custom Resource so it executes
     // automatically during deployment without manual intervention.
     const migrationLogGroup = new logs.LogGroup(this, 'DbMigrationLogs', {
-      logGroupName: `/aws/lambda/${CONFIG.projectName}-db-migration`,
+      // Preserve any orphaned conventional Lambda logs instead of deleting
+      // them merely to let CloudFormation create this managed log group.
+      logGroupName: `/${CONFIG.projectName}/lambda/db-migration`,
       retention: logs.RetentionDays.ONE_WEEK,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
