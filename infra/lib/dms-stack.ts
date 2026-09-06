@@ -158,6 +158,7 @@ export class DmsStack extends cdk.Stack {
           ParallelLoadBufferSize: 100,
           ParallelApplyThreads: 2,
           ParallelApplyBufferSize: 100,
+          ParallelApplyQueuesPerThread: 1,
         },
         FullLoadSettings: {
           TargetTablePrepMode: 'DROP_AND_CREATE',
@@ -183,10 +184,21 @@ export class DmsStack extends cdk.Stack {
           StartReplicationTaskType: 'start-replication',
         },
         physicalResourceId: cr.PhysicalResourceId.of(`${CONFIG.projectName}-search-cdc-start`),
+        outputPaths: ['ReplicationTask.Status'],
+      },
+      onDelete: {
+        service: 'DMS',
+        action: 'stopReplicationTask',
+        parameters: {
+          ReplicationTaskArn: this.replicationTask.ref,
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(`${CONFIG.projectName}-search-cdc-start`),
+        outputPaths: ['ReplicationTask.Status'],
+        ignoreErrorCodesMatching: 'InvalidResourceStateFault|ResourceNotFoundFault',
       },
       policy: cr.AwsCustomResourcePolicy.fromStatements([
         new iam.PolicyStatement({
-          actions: ['dms:StartReplicationTask'],
+          actions: ['dms:StartReplicationTask', 'dms:StopReplicationTask'],
           resources: [this.replicationTask.ref],
         }),
       ]),

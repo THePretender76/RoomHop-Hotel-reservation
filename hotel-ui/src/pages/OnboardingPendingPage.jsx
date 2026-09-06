@@ -1,12 +1,25 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../auth/useAuth';
 import { readPartnerApplication } from './partnerApplication';
 import styles from './PartnerOnboardingPage.module.css';
 
 export default function OnboardingPendingPage() {
   const location = useLocation();
+  const { partnerStatus, refreshUser } = useAuth();
   const storedApplication = readPartnerApplication();
   const applicantId = location.state?.applicantId ?? storedApplication.applicantId;
   const corporateEmail = location.state?.corporateEmail ?? storedApplication.corporateEmail;
+
+  useEffect(() => {
+    // Approval changes Cognito groups outside the current browser session.
+    // Force a token refresh so the new HotelPartner group is visible immediately.
+    refreshUser(true);
+  }, [refreshUser]);
+
+  if (partnerStatus === 'approved') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
 
   return (
     <div className={`${styles.page} ${styles.successPage}`}>

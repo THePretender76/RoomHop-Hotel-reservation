@@ -89,6 +89,24 @@ function buildEmail(detailType, detail) {
   throw new Error(`Unsupported notification event type: ${detailType}`);
 }
 
+function buildOperationsEmail(detailType, detail, operationsEmail) {
+  if (detailType !== 'PartnerApplicationSubmitted') return null;
+  return {
+    to: requiredRecipient(operationsEmail, detailType),
+    subject: `Partner application #${detail.applicantId} requires review - RoomHop`,
+    text: [
+      'A new hotel partner application is ready for review.',
+      '',
+      `Application ID: ${detail.applicantId}`,
+      `Company: ${detail.companyName || ''}`,
+      `Applicant: ${detail.applicantName || ''}`,
+      `Corporate email: ${detail.corporateEmail || ''}`,
+      '',
+      'Sign in as a SuperAdmin to approve or reject the application.',
+    ].join('\n'),
+  };
+}
+
 function parseSqsRecord(record) {
   const envelope = JSON.parse(record.body);
   return {
@@ -99,20 +117,41 @@ function parseSqsRecord(record) {
 
 async function processRecord(record, client = sesClient) {
   const { detailType, detail } = parseSqsRecord(record);
-  const email = buildEmail(detailType, detail);
   const sender = process.env.SENDER_EMAIL;
   if (!sender) throw new Error('SENDER_EMAIL is not configured');
 
-  await client.send(new SendEmailCommand({
-    FromEmailAddress: sender,
-    Destination: { ToAddresses: [email.to] },
-    Content: {
-      Simple: {
-        Subject: { Data: email.subject, Charset: 'UTF-8' },
-        Body: { Text: { Data: email.text, Charset: 'UTF-8' } },
-      },
-    },
-  }));
+  const recipientEmail = buildEmail(detailType, detail);
+  const operationsEmail = process.env.OPERATIONS_EMAIL
+    ? buildOperationsEmail(detailType, detail, process.env.OPERATIONS_EMAIL)
+    : null;
+  const emails = operationsEmail
+    ? [{ ...operationsEmail, required: true }, { ...recipientEmail, required: false }]
+    : [{ ...recipientEmail, required: true }];
+
+  for (const email of emails) {
+    try {
+      await client.send(new SendEmailCommand({
+        FromEmailAddress: sender,
+        Destination: { ToAddresses: [email.to] },
+        Content: {
+          Simple: {
+            Subject: { Data: email.subject, Charset: 'UTF-8' },
+            Body: { Text: { Data: email.text, Charset: 'UTF-8' } },
+          },
+        },
+      }));
+    } catch (error) {
+      if (email.required) throw error;
+      // In the SES sandbox, unverified applicant addresses cannot receive
+      // transactional mail. The verified operations alert remains mandatory.
+      console.warn(JSON.stringify({
+        message: 'Optional recipient notification failed',
+        detailType,
+        recipient: email.to,
+        error: error.message,
+      }));
+    }
+  }
 
   console.log(JSON.stringify({
     message: 'Notification sent',
@@ -139,5 +178,6 @@ exports.handler = async (event) => {
 };
 
 exports.buildEmail = buildEmail;
+exports.buildOperationsEmail = buildOperationsEmail;
 exports.parseSqsRecord = parseSqsRecord;
 exports.processRecord = processRecord;

@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import './App.css'
 import Navbar from './components/Navbar'
@@ -20,10 +19,9 @@ import { setAuthTokenGetter } from './api/client'
 
 function App() {
   const { getToken } = useAuth();
-
-  useEffect(() => {
-    setAuthTokenGetter(getToken);
-  }, [getToken]);
+  // Register the Cognito token provider during render so a protected route's
+  // initial data request never races this registration after a page refresh.
+  setAuthTokenGetter(getToken);
 
   return (
     <>
@@ -52,6 +50,11 @@ function App() {
           <Route path="/admin/properties/new" element={
             <PrivateRoute requiredGroup="HotelPartner">
               <PropertyRegistrationPage />
+            </PrivateRoute>
+          } />
+          <Route path="/admin/super/reviews" element={
+            <PrivateRoute requiredGroup="SuperAdmin">
+              <SuperAdminReviewPage />
             </PrivateRoute>
           } />
           <Route path="/admin/super/reviews/:applicantId" element={

@@ -106,6 +106,16 @@ export class ComputeStack extends cdk.Stack {
     });
     dbSecret.grantRead(reservationTaskRole);
     eventBus.grantPutEventsTo(reservationTaskRole);
+    const imagesBucketArn = cdk.Stack.of(this).formatArn({
+      service: 's3',
+      region: '',
+      account: '',
+      resource: `${CONFIG.s3.imagesBucket}-${cdk.Aws.ACCOUNT_ID}`,
+    });
+    reservationTaskRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['s3:PutObject'],
+      resources: [`${imagesBucketArn}/images/properties/*`],
+    }));
     reservationTaskRole.addToPolicy(new iam.PolicyStatement({
       actions: [
         'cognito-idp:AdminAddUserToGroup',
@@ -156,6 +166,7 @@ export class ComputeStack extends cdk.Stack {
         EVENT_BUS_NAME: eventBus.eventBusName,
         COGNITO_USER_POOL_ID: userPool.userPoolId,
         COGNITO_CLIENT_ID: userPoolClient.userPoolClientId,
+        IMAGES_BUCKET: `${CONFIG.s3.imagesBucket}-${cdk.Aws.ACCOUNT_ID}`,
       },
     });
 

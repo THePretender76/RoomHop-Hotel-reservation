@@ -183,11 +183,17 @@ function normalizeHotel(hotel) {
     throw new HttpError(422, 'Hotel stars must be between 1 and 5');
   }
 
+  const imageKey = typeof hotel?.imageKey === 'string' ? hotel.imageKey.trim() : '';
+  if (imageKey && !/^properties\/[a-zA-Z0-9-]+\/[a-zA-Z0-9-]+\.(jpg|png|webp)$/.test(imageKey)) {
+    throw new HttpError(422, 'Hotel image key is invalid');
+  }
+
   return {
     name: requiredString(hotel?.name, 'Hotel name', 150),
     location: requiredString(hotel?.location, 'Hotel location', 255),
     description: requiredString(hotel?.description, 'Hotel description', 5000),
     stars,
+    imageKey,
   };
 }
 
@@ -268,6 +274,13 @@ async function createCompleteProperty(payload, cognitoSub) {
       [normalized.hotel.name, normalized.hotel.location, normalized.hotel.description, normalized.hotel.stars]
     );
     const hotelId = hotelResult.insertId;
+
+    if (normalized.hotel.imageKey) {
+      await connection.query(
+        'INSERT INTO hotel_images (hotel_id, image_url, is_primary) VALUES (?, ?, TRUE)',
+        [hotelId, normalized.hotel.imageKey]
+      );
+    }
 
     await connection.query(
       'INSERT INTO hotel_admin_properties (admin_id, hotel_id) VALUES (?, ?)',

@@ -2,8 +2,10 @@ import * as cdk from 'aws-cdk-lib';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import { Construct } from 'constructs';
+import * as path from 'path';
 import { CONFIG } from './config';
 
 export interface FrontendStackProps extends cdk.StackProps {
@@ -36,6 +38,21 @@ export class FrontendStack extends cdk.Stack {
       versioned: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
+      cors: [{
+        allowedMethods: [s3.HttpMethods.PUT],
+        allowedOrigins: ['*'],
+        allowedHeaders: ['content-type'],
+        maxAge: 300,
+      }],
+    });
+
+    // Keep the production image bucket aligned with the original MinIO assets.
+    // The /images/* CloudFront behavior forwards the complete path to S3.
+    new s3deploy.BucketDeployment(this, 'HotelImagesDeployment', {
+      sources: [s3deploy.Source.asset(path.join(__dirname, '../../assets/hotel-images'))],
+      destinationBucket: this.imagesBucket,
+      destinationKeyPrefix: 'images',
+      prune: false,
     });
 
     const webAcl = new wafv2.CfnWebACL(this, 'CloudFrontWaf', {

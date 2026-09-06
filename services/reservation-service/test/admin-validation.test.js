@@ -55,7 +55,7 @@ test('partner payload rejects malformed email, URL, and property count', () => {
 
 test('complete property validation normalizes numbers and room metadata', () => {
   const result = normalizeCompleteProperty({
-    hotel: { name: 'H', location: 'Paris', description: 'D', stars: '4' },
+    hotel: { name: 'H', location: 'Paris', description: 'D', stars: '4', imageKey: 'properties/user-id/image-id.jpg' },
     roomTypes: [{
       name: 'Suite',
       maxOccupancy: '3',
@@ -66,9 +66,17 @@ test('complete property validation normalizes numbers and room metadata', () => 
     }],
   });
   assert.equal(result.hotel.stars, 4);
+  assert.equal(result.hotel.imageKey, 'properties/user-id/image-id.jpg');
   assert.equal(result.roomTypes[0].nightlyRate, 250.5);
   assert.deepEqual(result.roomTypes[0].amenities, ['WiFi']);
   assert.deepEqual(result.roomTypes[0].roomNumbers, ['101', '102']);
+});
+
+test('complete property validation rejects an image key outside the managed prefix', () => {
+  assert.throws(() => normalizeCompleteProperty({
+    hotel: { name: 'H', location: 'Paris', description: 'D', stars: 4, imageKey: '../private.jpg' },
+    roomTypes: [{ name: 'Room', maxOccupancy: 2, nightlyRate: 100, inventoryCount: 1 }],
+  }), /image key is invalid/i);
 });
 
 test('JWT helpers trust only claims returned by the cryptographic verifier', async () => {

@@ -31,3 +31,4 @@ logs/*.log
 -H
 curl
 .docx_tools/
+docs/.~lock.*#

@@ -32,6 +32,11 @@ export default function Navbar() {
       return;
     }
 
+    if (user?.groups?.includes('SuperAdmin')) {
+      navigate('/admin/super/reviews');
+      return;
+    }
+
     if (partnerStatus === 'pending') {
       navigate('/onboarding/pending-review');
       return;

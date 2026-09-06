@@ -32,6 +32,7 @@ export class EventsStack extends cdk.Stack {
 
     const senderEmail = new cdk.CfnParameter(this, 'SesSenderEmail', {
       type: 'String',
+      default: CONFIG.notifications.operationsEmail,
       description: 'A verified Amazon SES sender identity used for RoomHop emails',
       allowedPattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$',
       constraintDescription: 'Enter a valid email address that is verified in SES.',
@@ -160,16 +161,20 @@ export class EventsStack extends cdk.Stack {
       environment: {
         AWS_REGION_OVERRIDE: CONFIG.region,
         SENDER_EMAIL: senderEmail.valueAsString,
+        OPERATIONS_EMAIL: CONFIG.notifications.operationsEmail,
       },
       logGroup: notificationLogGroup,
     });
     this.notificationLambda.addToRolePolicy(new iam.PolicyStatement({
       actions: ['ses:SendEmail', 'ses:SendRawEmail'],
-      resources: [cdk.Stack.of(this).formatArn({
-        service: 'ses',
-        resource: 'identity',
-        resourceName: senderEmail.valueAsString,
-      })],
+      // SES evaluates destination identities as resources too. Restricting the
+      // resource to the sender identity blocks delivery to every recipient.
+      resources: ['*'],
+      conditions: {
+        StringEquals: {
+          'ses:FromAddress': senderEmail.valueAsString,
+        },
+      },
     }));
     this.notificationLambda.addEventSource(new lambdaEventSources.SqsEventSource(this.notificationQueue, {
       batchSize: 10,

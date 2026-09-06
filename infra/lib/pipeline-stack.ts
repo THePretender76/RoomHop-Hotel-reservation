@@ -1,6 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
-import * as codeconnections from 'aws-cdk-lib/aws-codestarconnections';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
@@ -36,16 +35,15 @@ export class PipelineStack extends cdk.Stack {
     });
     const githubRepository = new cdk.CfnParameter(this, 'GitHubRepository', {
       type: 'String',
-      default: 'Hotel_Management_system',
+      default: 'RoomHop-Hotel-reservation',
     });
     const githubBranch = new cdk.CfnParameter(this, 'GitHubBranch', {
       type: 'String',
-      default: 'main',
+      default: 'master',
     });
-
-    const connection = new codeconnections.CfnConnection(this, 'GitHubConnection', {
-      connectionName: `${CONFIG.projectName}-github`,
-      providerType: 'GitHub',
+    const githubConnectionArn = new cdk.CfnParameter(this, 'GitHubConnectionArn', {
+      type: 'String',
+      description: 'ARN of the AVAILABLE GitHub CodeConnections connection.',
     });
 
     const source = new codepipeline.Artifact('Source');
@@ -65,7 +63,7 @@ export class PipelineStack extends cdk.Stack {
         owner: githubOwner.valueAsString,
         repo: githubRepository.valueAsString,
         branch: githubBranch.valueAsString,
-        connectionArn: connection.attrConnectionArn,
+        connectionArn: githubConnectionArn.valueAsString,
         output: source,
         triggerOnPush: true,
       })],
@@ -279,9 +277,9 @@ export class PipelineStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'PipelineName', { value: pipeline.pipelineName });
-    new cdk.CfnOutput(this, 'GitHubConnectionArn', {
-      value: connection.attrConnectionArn,
-      description: 'Authorize this CodeConnections connection once in the AWS console.',
+    new cdk.CfnOutput(this, 'ConfiguredGitHubConnectionArn', {
+      value: githubConnectionArn.valueAsString,
+      description: 'GitHub CodeConnections connection used by the pipeline source.',
     });
   }
 }

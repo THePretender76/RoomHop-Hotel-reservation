@@ -1,0 +1,20 @@
+.page { min-height:100vh; padding:120px 24px 72px; background:#f9fafb; }
+.container { width:100%; max-width:1120px; margin:0 auto; }
+.pageHeader { max-width:760px; margin-bottom:32px; }
+.eyebrow,.cardKicker,.partnerEyebrow { margin:0;color:var(--accent);font-size:.75rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase; }
+.pageHeader h1 { margin:7px 0 10px;font-size:clamp(1.8rem,4vw,2.35rem);font-weight:700;letter-spacing:-.035em; }
+.pageHeader>p:last-child { max-width:680px;color:var(--text-muted);line-height:1.65; }
+.layout { display:grid;grid-template-columns:270px minmax(0,1fr);gap:24px;align-items:start; }
+.partnerCard { position:sticky;top:104px;padding:30px 26px;border-radius:var(--radius-lg);background:linear-gradient(145deg,#155d87,#2196c4);box-shadow:0 10px 30px rgba(26,115,167,.2);color:white; }
+.partnerEyebrow { color:rgba(255,255,255,.72); }
+.approvedMark { display:grid;width:48px;height:48px;margin:28px 0 18px;place-items:center;border-radius:50%;background:white;color:var(--accent);font-size:1.25rem;font-weight:800; }
+.partnerCard h2 { color:white;font-size:1.25rem; }.partnerCard>p:not(.partnerEyebrow) { margin-top:10px;color:rgba(255,255,255,.78);font-size:.82rem;line-height:1.6; }
+.accountStatus { display:flex;gap:9px;align-items:center;margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,.22);font-size:.78rem;font-weight:700; }.accountStatus span { width:8px;height:8px;border-radius:50%;background:#8df0c3;box-shadow:0 0 0 4px rgba(141,240,195,.16); }
+.actionsCard,.overviewCard { border:1px solid var(--border-color);border-radius:var(--radius-lg);background:white;box-shadow:var(--shadow-md); }
+.cardHeader { padding:30px 34px 24px;border-bottom:1px solid var(--border-color); }.cardHeader h2,.overviewCard h2 { margin-top:5px;font-size:1.45rem;letter-spacing:-.025em; }
+.actionList { padding:0 34px; }.actionRow { display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:16px;align-items:center;padding:24px 0;border-bottom:1px solid var(--border-color); }.actionRow:last-child { border-bottom:0; }
+.actionNumber { color:var(--accent);font-size:.72rem;font-weight:700;letter-spacing:.05em; }.actionCopy h3 { font-size:1rem; }.actionCopy p { max-width:490px;margin-top:5px;color:var(--text-muted);font-size:.8rem;line-height:1.5; }
+.actionButton,.primaryButton { display:inline-flex;min-height:44px;align-items:center;justify-content:center;gap:10px;padding:11px 17px;border-radius:var(--radius-sm);background:linear-gradient(135deg,#1a73a7,#2196c4);box-shadow:0 4px 14px rgba(26,115,167,.22);color:white;font-size:.83rem;font-weight:700;text-decoration:none;transition:transform .15s ease,box-shadow .2s ease; }.actionButton:hover,.primaryButton:hover { transform:translateY(-1px);box-shadow:0 6px 18px rgba(26,115,167,.3); }
+.overviewCard { display:flex;gap:30px;align-items:center;justify-content:space-between;margin-top:24px;padding:28px 32px; }.overviewCard>div>p:last-child { max-width:650px;margin-top:7px;color:var(--text-muted);font-size:.84rem; }.primaryButton { flex:0 0 auto; }
+@media (max-width:850px) { .layout { grid-template-columns:1fr; }.partnerCard { position:static; }.actionRow { grid-template-columns:32px minmax(0,1fr); }.actionButton { grid-column:2;width:max-content; }.overviewCard { align-items:flex-start;flex-direction:column; } }
+@media (max-width:560px) { .page { padding:104px 16px 48px; }.cardHeader,.overviewCard { padding:24px 20px; }.actionList { padding:0 20px; }.actionRow { grid-template-columns:1fr; }.actionNumber,.actionButton { grid-column:1; }.actionButton,.primaryButton { width:100%; }.pageHeader { margin-bottom:24px; } }

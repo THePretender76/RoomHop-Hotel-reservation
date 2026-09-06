@@ -110,7 +110,9 @@ export class DatabaseStack extends cdk.Stack {
 
     // Custom Resource Provider
     const migrationProviderLogs = new logs.LogGroup(this, 'DbMigrationProviderLogs', {
-      logGroupName: `/aws/lambda/${CONFIG.projectName}-db-migration-provider`,
+      // Use a stack-owned path so an orphaned conventional Lambda log group
+      // cannot block CloudFormation during a fresh environment deployment.
+      logGroupName: `/${CONFIG.projectName}/lambda/db-migration-provider`,
       retention: logs.RetentionDays.ONE_WEEK,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });

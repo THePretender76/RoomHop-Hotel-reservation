@@ -4,6 +4,8 @@ import {
   signUp,
   signOut,
   confirmSignUp,
+  confirmSignIn,
+  resendSignUpCode,
   getCurrentUser,
   fetchUserAttributes,
   fetchAuthSession,
@@ -13,11 +15,11 @@ import { AuthContext } from './useAuth';
 
 const authEnabled = isAuthEnabled();
 
-async function loadCurrentUser() {
+async function loadCurrentUser(forceRefresh = false) {
   const [currentUser, attributes, session] = await Promise.all([
     getCurrentUser(),
     fetchUserAttributes(),
-    fetchAuthSession(),
+    fetchAuthSession({ forceRefresh }),
   ]);
   const groups = session.tokens?.idToken?.payload?.['cognito:groups'] || [];
   return { ...currentUser, attributes, groups };
@@ -28,9 +30,9 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(authEnabled);
   const [localPartnerStatus, setLocalPartnerStatus] = useState('guest');
 
-  const checkUser = useCallback(async () => {
+  const checkUser = useCallback(async (forceRefresh = false) => {
     try {
-      const authenticatedUser = await loadCurrentUser();
+      const authenticatedUser = await loadCurrentUser(forceRefresh);
       setUser(authenticatedUser);
       return authenticatedUser;
     } catch {
@@ -77,6 +79,16 @@ export function AuthProvider({ children }) {
     return confirmSignUp({ username: email, confirmationCode: code });
   }
 
+  async function completeNewPassword(newPassword) {
+    const result = await confirmSignIn({ challengeResponse: newPassword });
+    const authenticatedUser = result.isSignedIn ? await checkUser() : null;
+    return { ...result, user: authenticatedUser };
+  }
+
+  async function resendRegistrationCode(email) {
+    return resendSignUpCode({ username: email });
+  }
+
   async function logout() {
     await signOut();
     setUser(null);
@@ -108,6 +120,8 @@ export function AuthProvider({ children }) {
     login,
     register,
     confirmRegistration,
+    completeNewPassword,
+    resendRegistrationCode,
     logout,
     getToken,
     isAuthenticated: Boolean(user),

@@ -5,6 +5,7 @@ const { requireGroup } = require('../middleware/auth');
 const adminService = require('../services/adminService');
 const logger = require('../logger');
 const { markActiveSpanError, withSpan } = require('../tracing');
+const { createHotelImageUpload } = require('../imageUpload');
 
 const router = express.Router();
 
@@ -71,6 +72,15 @@ router.post('/hotels/complete', requireGroup('HotelPartner'), async (req, res) =
     return res.status(201).json(result);
   } catch (error) {
     return sendError(res, error, 'create complete property');
+  }
+});
+
+router.post('/hotels/image-upload', requireGroup('HotelPartner'), async (req, res) => {
+  try {
+    const result = await createHotelImageUpload(req.body || {}, req.user.sub);
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendError(res, error, 'create hotel image upload');
   }
 });
 

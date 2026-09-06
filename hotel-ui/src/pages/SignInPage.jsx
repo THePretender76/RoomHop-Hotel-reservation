@@ -4,7 +4,7 @@ import { useAuth } from '../auth/useAuth';
 import styles from './SignInPage.module.css';
 
 export default function SignInPage() {
-  const { login, register, confirmRegistration, isAuthenticated } = useAuth();
+  const { login, register, confirmRegistration, resendRegistrationCode, completeNewPassword, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/search';
@@ -34,7 +34,16 @@ export default function SignInPage() {
   const [confirmEmail, setConfirmEmail] = useState('');
   const [confirmCode, setConfirmCode] = useState('');
   const [confirmError, setConfirmError] = useState('');
+  const [confirmMessage, setConfirmMessage] = useState('');
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+
+  // Cognito administrator-created users must set a permanent password first.
+  const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [newPasswordError, setNewPasswordError] = useState('');
+  const [newPasswordLoading, setNewPasswordLoading] = useState(false);
 
   // Redirect if already authenticated
   if (isAuthenticated) {
@@ -49,6 +58,8 @@ export default function SignInPage() {
       const result = await login(signInEmail, signInPassword);
       if (result.isSignedIn) {
         navigate(resolvedRedirectPath, { replace: true, state: fromState });
+      } else if (result.nextStep?.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
+        setNeedsPasswordChange(true);
       } else if (result.nextStep?.signInStep === 'CONFIRM_SIGN_UP') {
         setConfirmEmail(signInEmail);
         setNeedsConfirmation(true);
@@ -108,6 +119,68 @@ export default function SignInPage() {
     }
   }
 
+  async function handleNewPassword(e) {
+    e.preventDefault();
+    setNewPasswordError('');
+    if (newPassword !== newPasswordConfirm) {
+      setNewPasswordError('Passwords do not match.');
+      return;
+    }
+    setNewPasswordLoading(true);
+    try {
+      const result = await completeNewPassword(newPassword);
+      if (result.isSignedIn) {
+        navigate(resolvedRedirectPath, { replace: true, state: fromState });
+      }
+    } catch (err) {
+      setNewPasswordError(err.message || 'Unable to set the new password.');
+    } finally {
+      setNewPasswordLoading(false);
+    }
+  }
+
+  if (needsPasswordChange) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h1 className={styles.title}>Set your password</h1>
+            <p className={styles.subtitle}>Choose a permanent password for your RoomHop account.</p>
+          </div>
+          <form onSubmit={handleNewPassword} className={styles.form}>
+            {newPasswordError && <div className={styles.error}>{newPasswordError}</div>}
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="new-password">New password</label>
+              <input id="new-password" className={styles.input} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} minLength={8} autoFocus required />
+              <small className={styles.passwordHint}>At least 8 characters, with uppercase, lowercase, number, and symbol.</small>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="new-password-confirm">Confirm new password</label>
+              <input id="new-password-confirm" className={styles.input} type="password" value={newPasswordConfirm} onChange={(e) => setNewPasswordConfirm(e.target.value)} minLength={8} required />
+            </div>
+            <button type="submit" className={styles.submitBtn} disabled={newPasswordLoading || !newPassword || !newPasswordConfirm}>
+              {newPasswordLoading ? 'Saving...' : 'Set password and sign in'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  async function handleResendCode() {
+    setConfirmError('');
+    setConfirmMessage('');
+    setResendLoading(true);
+    try {
+      await resendRegistrationCode(confirmEmail);
+      setConfirmMessage(`A new confirmation code was sent to ${confirmEmail}.`);
+    } catch (err) {
+      setConfirmError(err.message || 'Unable to resend the confirmation code.');
+    } finally {
+      setResendLoading(false);
+    }
+  }
+
   // Confirmation code view
   if (needsConfirmation) {
     return (
@@ -120,6 +193,7 @@ export default function SignInPage() {
 
           <form onSubmit={handleConfirm} className={styles.form}>
             {confirmError && <div className={styles.error}>{confirmError}</div>}
+            {confirmMessage && <div className={styles.success}>{confirmMessage}</div>}
 
             <div className={styles.field}>
               <label className={styles.label} htmlFor="confirm-code">Confirmation Code</label>
@@ -141,8 +215,15 @@ export default function SignInPage() {
           </form>
 
           <p className={styles.switchText}>
-            <button className={styles.switchLink} onClick={() => setNeedsConfirmation(false)}>
-              â† Back to Sign In
+            Didn&apos;t receive the code?{' '}
+            <button type="button" className={styles.switchLink} onClick={handleResendCode} disabled={resendLoading}>
+              {resendLoading ? 'Sending...' : 'Resend code'}
+            </button>
+          </p>
+
+          <p className={styles.switchText}>
+            <button type="button" className={styles.switchLink} onClick={() => setNeedsConfirmation(false)}>
+              ← Back to Sign In
             </button>
           </p>
         </div>

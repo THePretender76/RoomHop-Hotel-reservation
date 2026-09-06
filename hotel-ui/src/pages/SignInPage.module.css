@@ -167,6 +167,22 @@
   font-size: 0.85rem;
 }
 
+.success {
+  padding: 12px 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-sm);
+  color: #15803d;
+  font-size: 0.85rem;
+}
+
+.passwordHint {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
 /* Switch text */
 .switchText {
   text-align: center;
@@ -187,6 +203,11 @@
 
 .switchLink:hover {
   text-decoration: underline;
+}
+
+.switchLink:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 /* Responsive */
