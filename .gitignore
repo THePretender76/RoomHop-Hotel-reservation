@@ -30,3 +30,4 @@ logs/*.log
 -d
 -H
 curl
+.docx_tools/
