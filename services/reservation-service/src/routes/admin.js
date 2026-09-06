@@ -4,11 +4,13 @@ const express = require('express');
 const { requireGroup } = require('../middleware/auth');
 const adminService = require('../services/adminService');
 const logger = require('../logger');
+const { markActiveSpanError, withSpan } = require('../tracing');
 
 const router = express.Router();
 
 function sendError(res, error, operation) {
   const status = error.status || 500;
+  markActiveSpanError(error.status ? 'business_error' : 'admin_error');
   logger.error(`Admin operation failed: ${operation}`, {
     error: error.message,
     stack: error.stack,
@@ -20,7 +22,10 @@ function sendError(res, error, operation) {
 
 router.post('/partners/applications', async (req, res) => {
   try {
-    const result = await adminService.createPartnerApplication(req.body, req.user);
+    const result = await withSpan('admin.partnerApplication', {
+      annotations: { operation: 'partner_application_create' },
+      errorType: 'admin_partner_application_error',
+    }, () => adminService.createPartnerApplication(req.body, req.user));
     return res.status(201).json(result);
   } catch (error) {
     return sendError(res, error, 'create partner application');
@@ -47,7 +52,10 @@ router.get('/partners/applications', requireGroup('SuperAdmin'), async (_req, re
 
 router.put('/partners/applications/:id/review', requireGroup('SuperAdmin'), async (req, res) => {
   try {
-    const result = await adminService.reviewPartnerApplication(req.params.id, req.body?.status);
+    const result = await withSpan('admin.reviewPartnerApplication', {
+      annotations: { operation: 'partner_application_review' },
+      errorType: 'admin_partner_review_error',
+    }, () => adminService.reviewPartnerApplication(req.params.id, req.body?.status));
     return res.status(200).json(result);
   } catch (error) {
     return sendError(res, error, 'review partner application');
@@ -56,7 +64,10 @@ router.put('/partners/applications/:id/review', requireGroup('SuperAdmin'), asyn
 
 router.post('/hotels/complete', requireGroup('HotelPartner'), async (req, res) => {
   try {
-    const result = await adminService.createCompleteProperty(req.body, req.user.sub);
+    const result = await withSpan('admin.createProperty', {
+      annotations: { operation: 'property_create' },
+      errorType: 'admin_property_create_error',
+    }, () => adminService.createCompleteProperty(req.body, req.user.sub));
     return res.status(201).json(result);
   } catch (error) {
     return sendError(res, error, 'create complete property');

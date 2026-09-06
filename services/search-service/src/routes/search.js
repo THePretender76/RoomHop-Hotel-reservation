@@ -1,10 +1,16 @@
 'use strict';
 
 const express = require('express');
+const { SpanKind } = require('@opentelemetry/api');
 const db = require('../db');
 const { searchHotels, imageUrl, parseAmenities } = require('../opensearch');
 const { validateSearchParams } = require('../middleware/validate');
 const logger = require('../logger');
+const {
+  annotateActive,
+  markActiveSpanError,
+  withSpan,
+} = require('../tracing');
 
 const router = express.Router();
 
@@ -82,7 +88,10 @@ async function searchMySql(criteria, database = db) {
   }));
 }
 
-router.get('/', async (req, res) => {
+async function handleSearch(req, res, dependencies = {}) {
+  const isOpenSearchConfigured = dependencies.openSearchConfigured || openSearchConfigured;
+  const runOpenSearch = dependencies.searchHotels || searchHotels;
+  const runMySqlSearch = dependencies.searchMySql || searchMySql;
   const missing = validateSearchParams(req.query);
   if (missing.length > 0) {
     return res.status(400).json({
@@ -130,26 +139,43 @@ router.get('/', async (req, res) => {
   };
 
   try {
-    if (openSearchConfigured()) {
+    annotateActive({ fallback: false, operation: 'hotel_search' });
+    if (isOpenSearchConfigured()) {
       try {
-        const results = await searchHotels(criteria);
+        const results = await withSpan('opensearch.search', {
+          kind: SpanKind.CLIENT,
+          annotations: { operation: 'hotel_search' },
+          errorType: 'opensearch_error',
+        }, () => runOpenSearch(criteria));
+        annotateActive({ result_source: 'opensearch' });
         return res.status(200).json({ results, source: 'opensearch' });
       } catch (error) {
+        annotateActive({ fallback: true });
         logger.warn('OpenSearch unavailable; using the authoritative MySQL fallback', {
-          error: error.message,
+          errorType: error?.name || 'OpenSearchError',
         });
       }
     }
 
-    const results = await searchMySql(criteria);
+    annotateActive({ fallback: true });
+    const results = await withSpan('mysql.fallback', {
+      kind: SpanKind.CLIENT,
+      annotations: { operation: 'hotel_search_fallback' },
+      errorType: 'mysql_error',
+    }, () => runMySqlSearch(criteria));
+    annotateActive({ result_source: 'mysql' });
     return res.status(200).json({ results, source: 'mysql' });
   } catch (error) {
+    markActiveSpanError(error?.status ? 'business_error' : 'search_error');
     logger.error('Search failed', { error: error.message, stack: error.stack });
     return res.status(500).json({ error: 'Internal server error' });
   }
-});
+}
+
+router.get('/', handleSearch);
 
 module.exports = router;
 module.exports.MYSQL_SEARCH_SQL = MYSQL_SEARCH_SQL;
+module.exports.handleSearch = handleSearch;
 module.exports.searchMySql = searchMySql;
 module.exports.validIsoDate = validIsoDate;

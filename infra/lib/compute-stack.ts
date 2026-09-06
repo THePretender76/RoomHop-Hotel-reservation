@@ -39,7 +39,7 @@ export class ComputeStack extends cdk.Stack {
   public readonly cluster: ecs.Cluster;
   public readonly searchRepository: ecr.Repository;
   public readonly reservationRepository: ecr.Repository;
-  public readonly xrayRepository: ecr.Repository;
+  public readonly collectorRepository: ecr.Repository;
   public readonly searchService: ecs.FargateService;
   public readonly reservationService: ecs.FargateService;
 
@@ -58,7 +58,7 @@ export class ComputeStack extends cdk.Stack {
 
     this.searchRepository = this.createRepository('SearchServiceRepo', 'search-service');
     this.reservationRepository = this.createRepository('ReservationServiceRepo', 'reservation-service');
-    this.xrayRepository = this.createRepository('XRayDaemonRepo', 'xray-daemon');
+    this.collectorRepository = this.createRepository('AdotCollectorRepo', 'adot-collector');
 
     this.cluster = new ecs.Cluster(this, 'RoomHopCluster', {
       vpc,
@@ -77,6 +77,7 @@ export class ComputeStack extends cdk.Stack {
     this.albListener = this.alb.addListener('HttpListener', {
       port: 80,
       protocol: elbv2.ApplicationProtocol.HTTP,
+      open: false,
       defaultAction: elbv2.ListenerAction.fixedResponse(404, {
         messageBody: '{"error":"Not Found"}',
         contentType: 'application/json',
@@ -89,8 +90,6 @@ export class ComputeStack extends cdk.Stack {
         iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy'),
       ],
     });
-    dbSecret.grantRead(executionRole);
-
     const searchTaskRole = new iam.Role(this, 'SearchTaskRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
@@ -99,9 +98,7 @@ export class ComputeStack extends cdk.Stack {
       actions: ['es:ESHttpGet', 'es:ESHttpHead', 'es:ESHttpPost'],
       resources: [`${searchDomain.domainArn}/*`],
     }));
-    searchTaskRole.addManagedPolicy(
-      iam.ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess')
-    );
+    this.grantXRayIngestion(searchTaskRole);
     this.grantEcsExec(searchTaskRole);
 
     const reservationTaskRole = new iam.Role(this, 'ReservationTaskRole', {
@@ -117,9 +114,7 @@ export class ComputeStack extends cdk.Stack {
       ],
       resources: [userPool.userPoolArn],
     }));
-    reservationTaskRole.addManagedPolicy(
-      iam.ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess')
-    );
+    this.grantXRayIngestion(reservationTaskRole);
     this.grantEcsExec(reservationTaskRole);
 
     const commonEnvironment = {
@@ -127,6 +122,13 @@ export class ComputeStack extends cdk.Stack {
       DB_NAME: CONFIG.rds.databaseName,
       AWS_REGION: CONFIG.region,
       NODE_ENV: 'production',
+      DEPLOYMENT_ENVIRONMENT: CONFIG.environment,
+      TRACING_ENABLED: 'true',
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'http://127.0.0.1:4318/v1/traces',
+      OTEL_TRACES_SAMPLER: 'parentbased_traceidratio',
+      OTEL_TRACES_SAMPLER_ARG: String(
+        CONFIG.observability.traceSamplingRates[CONFIG.environment] ?? 0.1
+      ),
     };
 
     const search = this.createService(vpc, securityGroups, executionRole, {
@@ -137,6 +139,7 @@ export class ComputeStack extends cdk.Stack {
       taskRole: searchTaskRole,
       environment: {
         ...commonEnvironment,
+        OTEL_SERVICE_NAME: `${CONFIG.projectName}-search`,
         OPENSEARCH_ENDPOINT: `https://${searchDomain.domainEndpoint}`,
       },
     });
@@ -149,6 +152,7 @@ export class ComputeStack extends cdk.Stack {
       taskRole: reservationTaskRole,
       environment: {
         ...commonEnvironment,
+        OTEL_SERVICE_NAME: `${CONFIG.projectName}-reservation`,
         EVENT_BUS_NAME: eventBus.eventBusName,
         COGNITO_USER_POOL_ID: userPool.userPoolId,
         COGNITO_CLIENT_ID: userPoolClient.userPoolClientId,
@@ -181,7 +185,7 @@ export class ComputeStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'ClusterName', { value: this.cluster.clusterName });
     new cdk.CfnOutput(this, 'SearchRepositoryUri', { value: this.searchRepository.repositoryUri });
     new cdk.CfnOutput(this, 'ReservationRepositoryUri', { value: this.reservationRepository.repositoryUri });
-    new cdk.CfnOutput(this, 'XRayRepositoryUri', { value: this.xrayRepository.repositoryUri });
+    new cdk.CfnOutput(this, 'CollectorRepositoryUri', { value: this.collectorRepository.repositoryUri });
   }
 
   private createRepository(id: string, name: string): ecr.Repository {
@@ -202,6 +206,13 @@ export class ComputeStack extends cdk.Stack {
         'ssmmessages:OpenControlChannel',
         'ssmmessages:OpenDataChannel',
       ],
+      resources: ['*'],
+    }));
+  }
+
+  private grantXRayIngestion(role: iam.Role): void {
+    role.addToPolicy(new iam.PolicyStatement({
+      actions: ['xray:PutTraceSegments'],
       resources: ['*'],
     }));
   }
@@ -240,13 +251,22 @@ export class ComputeStack extends cdk.Stack {
       },
     });
 
-    taskDefinition.addContainer(`${definition.id}XRayDaemon`, {
-      image: ecs.ContainerImage.fromAsset(path.join(__dirname, '../docker/xray')),
+    taskDefinition.addContainer(`${definition.id}AdotCollector`, {
+      image: ecs.ContainerImage.fromAsset(path.join(__dirname, '../docker/adot')),
       essential: false,
-      portMappings: [{ containerPort: 2000, protocol: ecs.Protocol.UDP }],
-      logging: ecs.LogDrivers.awsLogs({ streamPrefix: `${definition.serviceName}-xray`, logGroup }),
+      portMappings: [{ containerPort: 4318, protocol: ecs.Protocol.TCP }],
+      logging: ecs.LogDrivers.awsLogs({ streamPrefix: `${definition.serviceName}-adot`, logGroup }),
+      environment: { AWS_REGION: CONFIG.region },
       cpu: 32,
-      memoryReservationMiB: 256,
+      memoryReservationMiB: 128,
+      memoryLimitMiB: 256,
+      healthCheck: {
+        command: ['CMD-SHELL', '/healthcheck'],
+        interval: cdk.Duration.seconds(30),
+        timeout: cdk.Duration.seconds(5),
+        retries: 3,
+        startPeriod: cdk.Duration.seconds(10),
+      },
     });
 
     const service = new ecs.FargateService(this, `${definition.id}Service`, {

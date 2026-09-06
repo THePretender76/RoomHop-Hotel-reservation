@@ -81,7 +81,7 @@ const metabase = new MetabaseStack(app, 'RoomHop-Metabase', {
   wafAclArn: frontend.wafAclArn,
 });
 
-new DmsStack(app, 'RoomHop-DMS', {
+const dms = new DmsStack(app, 'RoomHop-DMS', {
   env,
   vpc: network.vpc,
   securityGroups: network.securityGroups,
@@ -90,13 +90,40 @@ new DmsStack(app, 'RoomHop-DMS', {
   opensearchArn: openSearch.domainArn,
 });
 
-new ObservabilityStack(app, 'RoomHop-Observability', { env });
+new ObservabilityStack(app, 'RoomHop-Observability', {
+  env,
+  httpApi: api.httpApi,
+  cluster: compute.cluster,
+  ecsServices: [
+    { label: 'Search', service: compute.searchService },
+    { label: 'Reservation', service: compute.reservationService },
+    { label: 'Metabase', service: metabase.metabaseService },
+  ],
+  database: database.database,
+  searchDomain: openSearch.domain,
+  queues: [
+    { label: 'Notification', queue: events.notificationQueue },
+    { label: 'Analytics', queue: events.analyticsQueue },
+  ],
+  deadLetterQueues: [
+    { label: 'Notification DLQ', queue: events.notificationDlq },
+    { label: 'Analytics DLQ', queue: events.analyticsDlq },
+  ],
+  functions: [
+    { label: 'Notification', function: events.notificationLambda },
+    { label: 'Analytics', function: events.analyticsLambda },
+    { label: 'DB migration', function: database.migrationLambda },
+  ],
+  dlqAlarms: [events.notificationDlqAlarm, events.analyticsDlqAlarm],
+  replicationTask: dms.replicationTask,
+  replicationInstance: dms.replicationInstance,
+});
 
 new PipelineStack(app, 'RoomHop-Pipeline', {
   env,
   searchRepository: compute.searchRepository,
   reservationRepository: compute.reservationRepository,
-  xrayRepository: compute.xrayRepository,
+  collectorRepository: compute.collectorRepository,
   metabaseRepository: metabase.metabaseRepository,
   searchService: compute.searchService,
   reservationService: compute.reservationService,

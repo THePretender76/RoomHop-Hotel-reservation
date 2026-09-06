@@ -6,6 +6,7 @@ const { createReservation, cancelReservation } = require('../services/reservatio
 const { publishEvent } = require('../eventPublisher');
 const db = require('../db');
 const logger = require('../logger');
+const { markActiveSpanError } = require('../tracing');
 
 const router = express.Router();
 
@@ -138,6 +139,7 @@ router.post('/', async (req, res) => {
     return res.status(result.existing ? 200 : 201).json(reservation);
   } catch (error) {
     const status = error.status || 500;
+    markActiveSpanError(error.status ? 'business_error' : 'reservation_error');
     logger.error('Reservation creation failed', { error: error.message, stack: error.stack });
     return res.status(status).json({ error: error.message || 'Internal server error' });
   }
@@ -159,6 +161,7 @@ router.get('/', async (req, res) => {
     return res.status(200).json({ reservations: rows });
   } catch (error) {
     const status = error.status || 500;
+    markActiveSpanError(error.status ? 'business_error' : 'mysql_error');
     logger.error('Guest reservations lookup failed', { error: error.message });
     return res.status(status).json({ error: error.message || 'Internal server error' });
   }
@@ -180,6 +183,7 @@ router.get('/:id', async (req, res) => {
     return res.status(200).json({ reservation: rows[0] });
   } catch (error) {
     const status = error.status || 500;
+    markActiveSpanError(error.status ? 'business_error' : 'mysql_error');
     logger.error('Reservation detail lookup failed', {
       error: error.message,
       reservationId: req.params.id,
@@ -209,6 +213,7 @@ router.delete('/:id', async (req, res) => {
     const status = error.status && [401, 403, 404, 409].includes(error.status)
       ? error.status
       : 500;
+    markActiveSpanError(error.status ? 'business_error' : 'reservation_error');
     logger.error('Reservation cancellation failed', {
       error: error.message,
       reservationId: req.params.id,

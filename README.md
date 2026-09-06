@@ -15,6 +15,7 @@ Le code AWS est actuellement **défini et validé localement, mais non déployé
 - événements analytics dans S3, catalogués par Glue et interrogés avec Athena/Metabase;
 - frontend React responsive derrière CloudFront et WAF;
 - pipeline GitHub/CodePipeline pour les tests, images conteneur et assets frontend.
+- traces applicatives OpenTelemetry exportées vers AWS X-Ray par un collector ADOT non essentiel dans chaque tâche Search et Reservation.
 
 ## Architecture AWS
 
@@ -38,7 +39,7 @@ Contraintes intentionnelles:
 - les services ECS utilisent `desiredCount: 1` au démarrage;
 - aucun NAT Gateway n'est créé.
 
-La documentation détaillée se trouve dans [infra/README.md](infra/README.md).
+La documentation détaillée se trouve dans [infra/README.md](infra/README.md). Le fonctionnement et le diagnostic des traces sont décrits dans [docs/distributed-tracing.md](docs/distributed-tracing.md).
 
 ## Organisation
 

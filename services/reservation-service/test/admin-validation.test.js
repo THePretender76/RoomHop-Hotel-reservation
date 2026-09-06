@@ -7,7 +7,7 @@ const {
   normalizeCompleteProperty,
 } = require('../src/services/adminService');
 const {
-  decodeJwtPayload,
+  createAuthenticator,
   groupsFrom,
 } = require('../src/middleware/auth');
 const { assertPutEventsSucceeded } = require('../src/eventPublisher');
@@ -71,11 +71,43 @@ test('complete property validation normalizes numbers and room metadata', () => 
   assert.deepEqual(result.roomTypes[0].roomNumbers, ['101', '102']);
 });
 
-test('JWT helpers decode Cognito claims and normalize groups', () => {
+test('JWT helpers trust only claims returned by the cryptographic verifier', async () => {
   const payload = { sub: 'abc', 'cognito:groups': ['HotelPartner', 'Guest'] };
-  const token = `x.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.y`;
-  assert.deepEqual(decodeJwtPayload(token), payload);
+  const verifier = { verify: async (token) => {
+    assert.equal(token, 'signed-token');
+    return payload;
+  } };
+  const authenticate = createAuthenticator(() => verifier);
+  const req = { get: () => 'Bearer signed-token' };
+  let continued = false;
+
+  await authenticate(req, {}, () => { continued = true; });
+
+  assert.equal(continued, true);
+  assert.equal(req.user.sub, 'abc');
   assert.deepEqual(groupsFrom({ groups: 'HotelPartner, Guest' }), ['HotelPartner', 'Guest']);
+});
+
+test('JWT authentication rejects a token rejected by the cryptographic verifier', async () => {
+  const authenticate = createAuthenticator(() => ({
+    verify: async () => { throw new Error('Invalid signature'); },
+  }));
+  let statusCode;
+  let responseBody;
+
+  await authenticate(
+    { get: () => 'Bearer forged-token' },
+    {
+      status: (status) => {
+        statusCode = status;
+        return { json: (body) => { responseBody = body; } };
+      },
+    },
+    () => assert.fail('authentication unexpectedly continued')
+  );
+
+  assert.equal(statusCode, 401);
+  assert.deepEqual(responseBody, { error: 'Invalid authentication token' });
 });
 
 test('EventBridge partial failures are treated as failures', () => {

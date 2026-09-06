@@ -23,9 +23,9 @@ ASSETS = DOCS / "assets"
 OUT = DOCS / "RoomHop_Specification_Produit_Technique.docx"
 ASSETS.mkdir(parents=True, exist_ok=True)
 
-DATE_FR = "5 septembre 2026"
-VERSION = "1.0"
-STATUS = "Référence de conception — code validé localement et recette AWS partielle"
+DATE_FR = "6 septembre 2026"
+VERSION = "1.1"
+STATUS = "Référence actualisée — code validé localement, changements non déployés"
 
 # standard_business_brief preset
 BLUE = "2E74B5"
@@ -537,7 +537,7 @@ def configure_header_footer(doc: Document) -> None:
     p.paragraph_format.tab_stops.add_tab_stop(Inches(6.5))
     left = p.add_run("ROOMHOP  |  SPÉCIFICATION PRODUIT ET TECHNIQUE")
     set_run_font(left, size=8, color=MUTED, bold=True)
-    right = p.add_run("\tVERSION 1.0")
+    right = p.add_run(f"\tVERSION {VERSION}")
     set_run_font(right, size=8, color=MUTED, bold=True)
     p_pr = p._p.get_or_add_pPr()
     borders = OxmlElement("w:pBdr")
@@ -697,10 +697,10 @@ def build_document() -> Path:
     network = ASSETS / "network_topology.png"
     sequence = ASSETS / "reservation_sequence.png"
     scores = [
-        ("Excellence opérationnelle", 3.2),
-        ("Sécurité", 3.7),
+        ("Excellence opérationnelle", 3.8),
+        ("Sécurité", 4.1),
         ("Fiabilité", 2.6),
-        ("Efficacité des performances", 3.4),
+        ("Efficacité des performances", 3.6),
         ("Optimisation des coûts", 3.0),
         ("Durabilité", 3.1),
     ]
@@ -775,7 +775,7 @@ def build_document() -> Path:
     )
     add_para(
         doc,
-        "L’architecture cible sépare le frontend, la recherche, les réservations, les notifications et l’analytique. Elle combine CloudFront, WAF, API Gateway, Cognito, ECS/Fargate, RDS MySQL, OpenSearch, DMS, EventBridge, SQS, Lambda, SES, S3, Glue, Athena, Metabase et un pipeline CodePipeline. Treize stacks CDK décrivent 270 ressources CloudFormation dans la dernière synthèse active.",
+        "L’architecture cible sépare le frontend, la recherche, les réservations, les notifications et l’analytique. Elle combine CloudFront, WAF, API Gateway, Cognito, ECS/Fargate, RDS MySQL, OpenSearch, DMS, EventBridge, SQS, Lambda, SES, S3, Glue, Athena, Metabase, CloudWatch, OpenTelemetry/ADOT, X-Ray et CodePipeline. Treize stacks CDK décrivent 276 ressources CloudFormation dans la synthèse du 6 septembre 2026.",
     )
     add_callout(
         doc,
@@ -791,9 +791,9 @@ def build_document() -> Path:
             ["Maturité", "Architecture de référence testée localement ; pas une plateforme exploitée."],
             ["Cohérence métier", "Transactions MySQL et verrous FOR UPDATE protègent le stock."],
             ["Résilience", "Files, DLQ, archive et fallback existent ; plusieurs composants sont mono-instance."],
-            ["Sécurité", "Bon socle, mais ouverture par défaut des listeners ALB et validation des claims à renforcer."],
-            ["Notification", "Chaîne codée et testée ; infrastructure déployée partiellement, mais réception SES non confirmée."],
-            ["Priorité", "Fermer les listeners, renforcer validations, observabilité et atomicité des événements."],
+            ["Sécurité", "Listeners ALB fermés au VPC Link et JWT Cognito revérifié cryptographiquement par Reservation."],
+            ["Notification", "DLQ surveillées par alarmes CloudWatch et notification SNS e-mail ; confirmation SNS/SES réelle encore requise."],
+            ["Priorité", "Déployer et tester les alertes/traces, puis renforcer SLO, runbooks, validation métier et atomicité des événements."],
         ],
         [2200, 7160],
         font_size=9,
@@ -1012,7 +1012,7 @@ def build_document() -> Path:
         ["Résilience", "SQS/DLQ, archive, backup RDS et fallback.", "Partielle, composants mono-instance"],
         ["Performance", "CloudFront, OpenSearch, index SQL, autoscaling 1–4.", "Prometteur ; aucun SLO mesuré"],
         ["Scalabilité", "Services stateless et asynchronisme.", "Applicatif scalable ; données limitées"],
-        ["Observabilité", "Logs, Container Insights, CloudTrail, daemon X-Ray.", "Alarmes/dashboard/instrumentation absents"],
+        ["Observabilité", "Logs corrélés, Container Insights, CloudTrail, ADOT/X-Ray, dashboard et alarmes DLQ.", "SLO, canaries, runbooks et validation AWS à compléter"],
         ["Maintenabilité", "Services séparés, 13 stacks, tests et pipeline.", "Bonne modularité"],
         ["Portabilité", "Environnement Docker et cible AWS.", "Risque de dérive locale/cloud"],
         ["Accessibilité", "Labels, focus, responsive, reduced motion sur onboarding.", "Audit global absent"],
@@ -1083,9 +1083,9 @@ def build_document() -> Path:
         [
             ["Front door", "CloudFront + WAF ; buckets S3 privés via OAC. Les URLs API Gateway restent directement joignables et peuvent contourner le WAF."],
             ["API", "HTTP API, JWT Cognito, VPC Link vers ALB interne."],
-            ["Sortie privée", "Endpoint S3 Gateway + 11 types d’endpoints Interface dans 2 AZ."],
-            ["Security groups", "VPC Link→ALB ; ALB→ECS 3000 ; ECS/Lambda/DMS→données."],
-            ["Écart critique", "Listeners ALB open par défaut : règles 0.0.0.0/0 sur 80/8080 dans le template."],
+            ["Sortie privée", "Endpoint S3 Gateway + 11 types d’endpoints Interface dans 2 AZ ; endpoint X-Ray avec SG dédié."],
+            ["Security groups", "VPC Link→ALB 80/8080 uniquement ; ALB→ECS 3000 ; ECS→X-Ray 443 ; ECS/Lambda/DMS→données."],
+            ["Écart résiduel", "Les URLs HTTP API restent directement joignables et CORS reste permissif (*)."],
         ],
         [2100, 7260],
         font_size=8.8,
@@ -1093,10 +1093,10 @@ def build_document() -> Path:
     )
     add_callout(
         doc,
-        "Correction recommandée avant déploiement",
-        "Créer les listeners avec open: false et ne conserver que l’ingress depuis le security group VPC Link. Restreindre aussi l’accès direct aux endpoints API Gateway, limiter CORS aux origines attendues et poser CSP/HSTS sur les réponses edge.",
-        fill=RED_FILL,
-        accent=RISK,
+        "Frontière interne durcie",
+        "Les listeners 80 et 8080 utilisent open: false. Les tests CDK vérifient que l’ALB n’accepte que le security group du VPC Link, sans CIDR IPv4/IPv6. Restent à traiter l’accès direct aux endpoints API Gateway, CORS et les en-têtes CSP/HSTS.",
+        fill=GREEN_FILL,
+        accent=GREEN,
     )
 
     # 14
@@ -1110,7 +1110,7 @@ def build_document() -> Path:
             ["Reservation ECS", "0,5 vCPU / 1 Gio", "1 initial ; autoscaling 1–4", "Réservation, annulation et admin partenaire."],
             ["Metabase ECS", "1 vCPU / 2 Gio", "1", "Exploration BI via Athena."],
             ["ALB interne", "Listeners 80 et 8080", "managé", "Routage chemins application et Metabase."],
-            ["ECR", "4 repositories", "managé", "Search, Reservation, X-Ray et Metabase."],
+            ["ECR", "4 repositories", "managé", "Search, Reservation, collector ADOT et Metabase."],
         ],
         [2200, 1900, 2350, 2910],
         font_size=8.5,
@@ -1120,11 +1120,12 @@ def build_document() -> Path:
     add_label_para(doc, "Santé. ", "Chaque service expose /health. L’ALB utilise des target groups dédiés. Les services sont stateless ; les sessions et données restent dans Cognito/MySQL.")
     add_callout(
         doc,
-        "Nuance X-Ray",
-        "Un sidecar daemon X-Ray est provisionné, mais aucun aws-xray-sdk n’est trouvé dans les services. Le document ne considère donc pas le traçage distribué comme opérationnel tant que l’instrumentation n’est pas ajoutée.",
-        fill=AMBER_FILL,
-        accent=GOLD,
+        "OpenTelemetry et ADOT",
+        "Chaque tâche Search et Reservation contient un collector ADOT non essentiel. Les applications créent des spans manuels, exportés en OTLP/HTTP sur 127.0.0.1:4318 puis vers X-Ray via l’endpoint privé. Une panne du collector ne rend pas le conteneur applicatif indisponible.",
+        fill=GREEN_FILL,
+        accent=GREEN,
     )
+    add_label_para(doc, "Sampling et données. ", "Le taux parent-based vaut 100 % en dev/test, 50 % en recette/staging et 10 % en production. Une allowlist exclut JWT, PII, SQL et contenu métier ; EventBridge reçoit seulement le TraceHeader et les logs ajoutent traceId/spanId.")
     add_source(doc, "infra/lib/compute-stack.ts ; infra/lib/api-stack.ts ; infra/lib/metabase-stack.ts ; infra/docker")
 
     # 15
@@ -1230,9 +1231,11 @@ def build_document() -> Path:
     add_bullets(doc, [
         "Bus EventBridge dédié et archive 365 jours pour replay contrôlé.",
         "Une file notification et une file analytics, chacune chiffrée et associée à une DLQ ; maxReceiveCount = 3.",
+        "Chaque DLQ déclenche à partir d’un message une alarme CloudWatch, qui publie sur le topic SNS roomhop-dlq-alerts.",
+        "Le topic SNS possède un abonnement e-mail vers thenewpretender76@outlook.com ; il reste inactif tant que le destinataire n’a pas confirmé l’abonnement.",
         "Lambdas Node.js 24 hors VPC pour joindre SES/S3 sans NAT ; remontée des batchItemFailures message par message.",
         "Clés S3 analytiques déterministes afin qu’un retry écrase logiquement le même objet.",
-    ], bullet_id, size=9.8, after=4)
+    ], bullet_id, size=8.9, after=3)
     add_callout(
         doc,
         "Atomicité incomplète",
@@ -1243,7 +1246,7 @@ def build_document() -> Path:
     add_callout(
         doc,
         "Exploitation SES",
-        "Avant toute recette : vérifier l’expéditeur, sortir de sandbox si nécessaire, configurer DKIM/SPF/DMARC, suivre bounces/complaints et alerter sur la DLQ. Les diagnostics applicatifs se trouvent dans /roomhop/lambda/notification-handler et /roomhop/lambda/analytics-handler ; ces noms évitent les conflits avec d’anciens groupes /aws/lambda conservés.",
+        "Après déploiement, confirmer l’abonnement SNS reçu par e-mail. Vérifier aussi l’expéditeur SES, sortir de sandbox si nécessaire, configurer DKIM/SPF/DMARC et suivre bounces/complaints. Les alarmes DLQ signalent l’échec de traitement, mais ne prouvent pas la délivrabilité SES.",
         fill=AMBER_FILL,
         accent=GOLD,
     )
@@ -1286,6 +1289,7 @@ def build_document() -> Path:
             ["Identité utilisateur", "Cognito User Pool, client SPA, confirmation e-mail, TOTP optionnel."],
             ["Rôles métier", "Guest, HotelPartnerPending, HotelPartner, SuperAdmin."],
             ["API edge", "Authorizer JWT sur routes protégées ; recherche publique ; CORS actuellement permissif (*)."],
+            ["API service", "Reservation revérifie signature, issuer, audience/client et token_use=id avec aws-jwt-verify."],
             ["Autorisation service", "Contrôle groupe, statut partenaire et propriété hotel/réservation."],
             ["Secrets", "Secrets Manager pour MySQL et Metabase ; injection par rôle d’exécution."],
             ["Données", "Chiffrement RDS/OpenSearch/S3/SQS/ECR ; TLS et subnets privés."],
@@ -1298,10 +1302,10 @@ def build_document() -> Path:
     )
     add_callout(
         doc,
-        "Risque de confiance réseau",
-        "Le middleware Reservation accepte les claims transmis par le chemin interne sans vérifier lui-même une signature JWT. Tant que les listeners restent ouverts au VPC, un appel interne peut contourner l’authorizer. Fermer l’ALB et valider cryptographiquement le jeton ou un mécanisme d’authentification de service.",
-        fill=RED_FILL,
-        accent=RISK,
+        "Défense en profondeur appliquée",
+        "Le middleware Reservation n’accepte plus des claims décodés sans preuve : il vérifie le jeton Cognito avant de construire req.user. Combinée aux listeners fermés et à l’ingress limité au VPC Link, cette mesure ferme le contournement interne identifié le 5 septembre.",
+        fill=GREEN_FILL,
+        accent=GREEN,
     )
     add_bullets(doc, [
         "Activer rotation des secrets et procédures d’urgence.",
@@ -1349,7 +1353,7 @@ def build_document() -> Path:
         [
             ["Source", "GitHub via CodeConnections", "Déclenchement sur branche paramétrée ; autorisation manuelle initiale."],
             ["Validate", "CodeBuild", "Tests, lint, build et synthèse CDK."],
-            ["ContainerBuild", "CodeBuild Docker", "Images Search, Reservation, X-Ray et Metabase poussées dans ECR."],
+            ["ContainerBuild", "CodeBuild Docker", "Images Search, Reservation, collector ADOT et Metabase poussées dans ECR."],
             ["FrontendBuild", "CodeBuild", "Build Vite configuré avec outputs Cognito/API."],
             ["Deploy", "ECS + S3 actions", "Trois services mis à jour ; frontend copié dans S3."],
             ["Invalidate", "CodeBuild", "Invalidation CloudFront après livraison frontend."],
@@ -1380,31 +1384,31 @@ def build_document() -> Path:
         doc,
         ["Signal", "Présent", "Manquant / amélioration"],
         [
-            ["Logs applicatifs", "Groupes CloudWatch explicites, logs structurés.", "Corrélation uniforme et politique PII."],
-            ["Conteneurs", "Container Insights.", "Alertes CPU/mémoire/restarts/targets."],
-            ["Traçage", "Daemon X-Ray sidecar.", "Instrumentation SDK et propagation des segments."],
+            ["Logs applicatifs", "Groupes explicites, JSON structuré, traceId/spanId ajoutés depuis le contexte actif.", "Politique de rétention PII et requêtes Logs Insights enregistrées."],
+            ["Conteneurs", "Container Insights Enhanced déjà configuré ; CPU, mémoire et tâches visibles au dashboard.", "Alarmes CPU/mémoire/restarts/targets."],
+            ["Traçage", "OpenTelemetry manuel + collector ADOT non essentiel + export X-Ray privé.", "Validation après déploiement et propagation aux consommateurs."],
             ["Audit", "CloudTrail management events vers S3 + Logs.", "Trail multi-région, alertes sensibles et expiration des versions S3 non courantes."],
             ["Accès", "IAM Access Analyzer.", "Traitement formalisé des findings."],
-            ["Asynchrone", "DLQ et archive EventBridge.", "Alarmes âge/profondeur/DLQ et runbook replay."],
-            ["Données", "Backup RDS 7 jours, Performance Insights.", "Test restore, lag DMS, espace, connexions."],
-            ["Expérience", "Aucun SLO ni canary.", "Synthetics, p95, taux d’erreur et parcours critique."],
+            ["Asynchrone", "Deux alarmes DLQ à seuil 1, action SNS et abonnement e-mail opérations.", "Confirmer l’abonnement, tester l’alerte et écrire le runbook replay."],
+            ["Données", "Dashboard RDS/OpenSearch/DMS ; backup RDS 7 jours et Performance Insights.", "Alarmes lag DMS/espace/connexions et test restore."],
+            ["Expérience", "Latences API p95/p99 et taux d’erreur calculé dans le dashboard.", "SLI/SLO, Synthetics et canaries de parcours critique."],
         ],
         [1700, 3300, 4360],
-        font_size=8.2,
+        font_size=7.7,
     )
     add_callout(
         doc,
-        "À ne pas surévaluer",
-        "La stack Observability ne crée ni dashboard ni alarmes métier. Le document considère donc l’observabilité comme un socle de télémétrie, pas comme une capacité d’exploitation aboutie.",
-        fill=AMBER_FILL,
-        accent=GOLD,
+        "Dashboard RoomHop Operations",
+        "Le construct dédié crée 28 widgets et 64 lignes métriques sans dupliquer de ressources. Il couvre API Gateway, trois services ECS, RDS, OpenSearch, SQS/DLQ, trois Lambdas et DMS. Les expressions calculent le taux d’erreur API, le total visible dans les DLQ et le total des erreurs Lambda.",
+        fill=GREEN_FILL,
+        accent=GREEN,
     )
     add_bullets(doc, [
         "Définir SLI/SLO pour recherche, réservation et e-mail.",
         "Créer runbooks : stock conflictuel, DMS lag, OpenSearch indisponible, SES bounce, rollback ECS et restauration RDS.",
         "Tester périodiquement alertes, replay et restauration.",
     ], bullet_id, size=9.7, after=4)
-    add_source(doc, "infra/lib/observability-stack.ts ; logs dans compute/events/database/metabase ; aucun AWS::CloudWatch::Alarm dans la synthèse")
+    add_source(doc, "infra/lib/constructs/roomhop-operations-dashboard.ts ; infra/lib/observability-stack.ts ; infra/lib/events-stack.ts ; docs/distributed-tracing.md")
 
     # 24
     new_page(doc, state)
@@ -1413,10 +1417,10 @@ def build_document() -> Path:
         doc,
         ["Validation", "Résultat observé"],
         [
-            ["Backend et services", "65/65 tests réussis."],
+            ["Backend et services", "74/74 tests réussis dans la dernière validation complète ; Search 10/10 et Reservation 12/12 revalidés le 6 septembre."],
             ["Frontend", "10/10 tests, lint et build réussis."],
-            ["Infrastructure", "5/5 tests d’architecture, TypeScript et synthèse de 13 stacks réussis."],
-            ["Conteneurs", "4/4 images construites localement."],
+            ["Infrastructure", "12/12 tests d’architecture, TypeScript et synthèse stricte de 13 stacks / 276 ressources réussis."],
+            ["Conteneurs", "Le daemon X-Ray est remplacé par l’image ADOT épinglée v0.49.0 ; le build Docker du nouveau collector reste à revalider."],
             ["AWS", "Recette éphémère partielle dans us-east-1 : Network, Auth, Events, Observability, Database, OpenSearch, Analytics et Compute déployés puis détruits. DMS n’a pas terminé ; Api, Frontend, Metabase et Pipeline n’ont pas été atteints."],
         ],
         [2800, 6560],
@@ -1426,7 +1430,9 @@ def build_document() -> Path:
     add_para(doc, "Checklist avant la prochaine recette éphémère :", size=10.5, color=INK, bold=True)
     add_bullets(doc, [
         "Définir compte/région, bootstrap CDK et tags ; examiner cdk diff et coûts.",
-        "Fermer les listeners ALB, renforcer JWT/validation serveur et corriger dates/filtre étoiles.",
+        "Vérifier au cdk diff que les listeners restent fermés au VPC Link ; corriger dates/filtre étoiles et compléter la validation métier.",
+        "Confirmer l’abonnement SNS puis injecter un message de test dans chaque DLQ et vérifier alarme, notification et retour à OK.",
+        "Valider dans X-Ray les spans Search/Reservation, la corrélation traceId/spanId et le comportement fail-open du collector ADOT.",
         "Vérifier SesSenderEmail, destinataires sandbox, DKIM, réception réelle du message et configuration des événements.",
         "Autoriser CodeConnections GitHub et décider qui déploie réellement les stacks.",
         "Charger les images, initialiser Metabase, connecter Athena et restreindre son accès.",
@@ -1444,7 +1450,7 @@ def build_document() -> Path:
 
     # 25
     new_page(doc, state)
-    add_page_title(doc, "22", "Modèle de coût théorique", "Ordre de grandeur à la demande, us-east-1, daté du 5 septembre 2026")
+    add_page_title(doc, "22", "Modèle de coût théorique", "Ordre de grandeur à la demande, us-east-1, révisé le 6 septembre 2026")
     rates = [
         ("11 endpoints Interface dans 2 AZ", 0.2200),
         ("Fargate : Search + Reservation + Metabase", 0.0987),
@@ -1474,7 +1480,7 @@ def build_document() -> Path:
     add_callout(
         doc,
         "Lecture correcte",
-        "Estimation brute hors taxes, transferts importants, requêtes, logs volumineux et variations tarifaires. Les endpoints privés dominent le socle. OpenSearch en RemovalPolicy RETAIN peut continuer à coûter environ 0,94 USD/jour s’il est oublié après destruction.",
+        "Estimation brute hors taxes, transferts importants, requêtes, logs volumineux et variations tarifaires. ADOT réutilise la taille des tâches et l’endpoint X-Ray existant, mais traces X-Ray et logs collector sont facturés à l’usage. Dashboard, alarmes et SNS suivent aussi la tarification CloudWatch/SNS et les quotas gratuits du compte. OpenSearch en RETAIN peut continuer à coûter environ 0,94 USD/jour après destruction.",
         fill=AMBER_FILL,
         accent=GOLD,
     )
@@ -1498,7 +1504,7 @@ def build_document() -> Path:
         ASSETS / "well_architected_scorecard.png",
         6.15,
         "Figure 5 — Score de maturité indicatif par pilier.",
-        "Barres de score Well-Architected sur cinq : opérations 3,2 ; sécurité 3,7 ; fiabilité 2,6 ; performance 3,4 ; coûts 3,0 ; durabilité 3,1.",
+        "Barres de score Well-Architected sur cinq : opérations 3,8 ; sécurité 4,1 ; fiabilité 2,6 ; performance 3,6 ; coûts 3,0 ; durabilité 3,1.",
     )
     overall = sum(v for _, v in scores) / len(scores)
     add_table(
@@ -1525,15 +1531,15 @@ def build_document() -> Path:
         [
             [
                 "Excellence opérationnelle",
-                "CDK, 13 stacks, tests, pipeline V2, logs explicites, CloudTrail, DLQ/archive.",
-                "Pas de déploiement infra dans pipeline, dashboard/alarme/SLO/runbooks ; X-Ray non instrumenté ; documentation locale divergente.",
-                "3,2/5",
+                "CDK, 13 stacks, tests, pipeline V2, logs corrélés, ADOT/X-Ray, dashboard, alarmes DLQ, CloudTrail et archive.",
+                "Pas de déploiement infra dans pipeline ; SLO, canaries, runbooks, alarmes CPU/DMS/SES et exercices opérationnels absents.",
+                "3,8/5",
             ],
             [
                 "Sécurité",
-                "Cognito, groupes, JWT edge, propriété métier, WAF, chiffrement, secrets, réseau isolé, Access Analyzer.",
-                "Listeners ALB ouverts au VPC, confiance claims interne, rotation/GuardDuty/Security Hub/cdk-nag/PII à ajouter.",
-                "3,7/5",
+                "Cognito, JWT vérifié à l’edge et dans Reservation, propriété métier, listeners ALB limités au VPC Link, WAF, chiffrement et réseau isolé.",
+                "Accès direct HTTP API/CORS, rotation, GuardDuty, Security Hub, cdk-nag et gouvernance PII à traiter.",
+                "4,1/5",
             ],
         ],
         [1750, 2750, 3900, 960],
@@ -1542,13 +1548,13 @@ def build_document() -> Path:
     add_para(doc, "Appréciation détaillée — opérations", size=11, color=INK, bold=True)
     add_bullets(doc, [
         "Prepare : infrastructure et tests automatisés, mais readiness review, runbooks et RTO/RPO non formalisés.",
-        "Operate : télémétrie créée, mais aucune alarme ni procédure de triage codée.",
+        "Operate : dashboard transverse, traces et alarmes DLQ sont codés ; procédures de triage, SLO et exercices restent à formaliser.",
         "Evolve : pipeline favorise les changements applicatifs ; le chemin d’évolution des stacks reste manuel.",
     ], bullet_id, size=9.5, after=3)
     add_para(doc, "Appréciation détaillée — sécurité", size=11, color=INK, bold=True)
     add_bullets(doc, [
         "Identité forte au périmètre utilisateur et contrôles d’appartenance côté service.",
-        "Défense en profondeur incomplète entre API Gateway et ALB tant que open: false et validation cryptographique ne sont pas appliqués.",
+        "Défense en profondeur renforcée entre API Gateway, ALB et service grâce à open:false, ingress VPC Link et vérification Cognito côté Reservation.",
         "Protection des données convenable par défaut ; gouvernance, rotation et réponse à incident à industrialiser.",
     ], bullet_id, size=9.5, after=3)
     p = doc.add_paragraph()
@@ -1573,9 +1579,9 @@ def build_document() -> Path:
             ],
             [
                 "Performance",
-                "CloudFront, OpenSearch, indexes SQL, services stateless, autoscaling 1–4, traitement asynchrone.",
-                "Aucune mesure p95/charge, assemblage multi-index, résultats vides non contrôlés, tailles non benchmarkées.",
-                "3,4/5",
+                "CloudFront, OpenSearch, indexes SQL, services stateless, autoscaling 1–4, traitement asynchrone et métriques p95/p99 prêtes.",
+                "Aucune mesure de charge réelle, assemblage multi-index, résultats vides non contrôlés et tailles non benchmarkées.",
+                "3,6/5",
             ],
         ],
         [1500, 2850, 4050, 960],
@@ -1650,21 +1656,22 @@ def build_document() -> Path:
     new_page(doc, state)
     add_page_title(doc, "27", "Feuille de route d’amélioration")
     roadmap = [
-        ["P0 — avant déploiement", "Fermer listeners ALB ; validation JWT/service ; dates dynamiques ; filtre étoiles ; validation serveur stricte ; contraintes DB.", "Sécurité et exactitude produit."],
+        ["Livré — 6 septembre", "Listeners fermés au VPC Link ; JWT revérifié ; alarmes DLQ/SNS ; dashboard transverse ; tracing ADOT/X-Ray et logs corrélés.", "Sécurité et capacité de diagnostic."],
+        ["P0 — avant déploiement", "Dates dynamiques ; filtre étoiles ; validation réservation stricte ; contraintes DB ; revue cdk diff des frontières.", "Exactitude produit et non-régression."],
         ["P0 — fiabilité métier", "Transactional outbox, déduplication consommateurs, gestion duplicate idempotency, tests MySQL concurrents.", "Éviter événement perdu/doublé et erreurs 500."],
-        ["P0 — exploitation", "Alarmes, dashboard, SLO, logs corrélés, DLQ/replay, DMS lag, SES bounce/complaint et runbooks.", "Détecter et restaurer rapidement."],
+        ["P0 — exploitation", "Confirmer/tester SNS ; SLO ; runbooks DLQ/replay ; alarmes DMS/CPU/SES ; canaries et validation X-Ray.", "Détecter et restaurer rapidement."],
         ["P0 — gouvernance", "Tags, Budget, Anomaly Detection, procédure destroy/RETAIN, secrets et PII.", "Limiter coût et risque."],
         ["P1 — expérience", "Montant exact avant confirmation, room_count, demandes spéciales, gestion partenaire complète, file SuperAdmin, upload images.", "Finir les parcours."],
         ["P1 — recherche", "Fraîcheur d’index, fallback sur incohérence, Support LOB DMS, starter onUpdate, alarmes de lag.", "Réduire faux zéros."],
         ["P1 — livraison", "Pipeline infra séparé avec diff/approbation, scans, comptes dev/stage/prod et E2E.", "Changements contrôlés."],
         ["P2 — production", "Si contraintes levées : RDS Multi-AZ, desiredCount ≥2, OpenSearch multi-nœud/zone, stratégie DR.", "Haute disponibilité."],
-        ["P2 — data", "Parquet, métriques certifiées, lifecycle, privacy retention et dashboards préconfigurés.", "BI économique et gouvernée."],
+        ["P2 — data", "Parquet, métriques certifiées, lifecycle et privacy retention ; tableaux BI préconfigurés.", "BI économique et gouvernée."],
     ]
     add_table(doc, ["Horizon", "Actions", "Valeur"], roadmap, [2050, 5340, 1970], font_size=8.0, first_col_bold=True)
     add_callout(
         doc,
         "Ordre recommandé",
-        "Corriger d’abord les frontières de confiance et l’atomicité. Ajouter ensuite mesure et tests intégrés. Les changements de haute disponibilité restent conditionnels : ils ne modifient pas les deux invariants explicitement conservés pour la version actuelle.",
+        "Les frontières de confiance et le socle de mesure sont maintenant codés. L’ordre suivant est : validation en AWS, atomicité événementielle, SLO/runbooks, puis tests intégrés. Les changements de haute disponibilité restent conditionnels aux contraintes de coût.",
         fill=GREEN_FILL,
         accent=GREEN,
     )
@@ -1674,14 +1681,14 @@ def build_document() -> Path:
     new_page(doc, state)
     add_page_title(doc, "28", "Registre des risques")
     risks = [
-        ["R-01", "Listener ALB ouvert par défaut", "Élevé", "Élevé", "open:false + ingress SG VPC Link"],
-        ["R-02", "Claims internes non vérifiés cryptographiquement", "Moyen", "Élevé", "JWT/service auth + réseau fermé"],
+        ["R-01", "Listener ALB ouvert par défaut", "Clos", "—", "open:false + ingress SG VPC Link ; test CDK"],
+        ["R-02", "Claims internes non vérifiés cryptographiquement", "Clos", "—", "aws-jwt-verify dans Reservation ; test de rejet"],
         ["R-03", "Commit sans événement ou doublon au replay", "Moyen", "Élevé", "Outbox + déduplication"],
         ["R-04", "OpenSearch vide mais index incomplet", "Moyen", "Moyen", "Fraîcheur + fallback contrôlé"],
         ["R-05", "RDS Single-AZ indisponible", "Moyen", "Élevé", "Backup, restore drill, RTO/RPO ; Multi-AZ en prod"],
         ["R-06", "Une seule task applicative", "Moyen", "Moyen", "Auto-remplacement ; desired≥2 en prod"],
-        ["R-07", "OpenSearch/DMS mono-instance", "Moyen", "Moyen", "Fallback, alarmes, procédure reload"],
-        ["R-08", "SES sandbox/identité non prête", "Élevé", "Moyen", "Recette SES et suivi DLQ"],
+        ["R-07", "OpenSearch/DMS mono-instance", "Moyen", "Moyen", "Fallback, dashboard lag, alarmes et procédure reload"],
+        ["R-08", "SES sandbox/identité non prête", "Élevé", "Moyen", "Recette SES ; alarme DLQ/SNS déjà codée"],
         ["R-09", "Pipeline ne déploie pas l’IaC", "Élevé", "Moyen", "Workflow infra dédié"],
         ["R-10", "Divergence local/AWS et README obsolète", "Élevé", "Faible", "Docs générées, tests contractuels"],
         ["R-11", "Validation réservation permissive", "Moyen", "Élevé", "Schémas stricts + contraintes SQL"],
@@ -1700,22 +1707,22 @@ def build_document() -> Path:
     new_page(doc, state)
     add_page_title(doc, "29", "Traçabilité et couverture de tests")
     coverage = [
-        ["Recherche", "Paramètres, prix, disponibilité, fallback", "5 tests service + propriétés API", "Unitaire/contractuel"],
-        ["Réservation", "Montant, stock, idempotence, propriété", "8 tests service + propriétés API", "Mocks ; MySQL réel absent"],
+        ["Recherche", "Paramètres, prix, disponibilité, fallback et tracing fail-open", "10 tests service + propriétés API", "Unitaire/contractuel"],
+        ["Réservation", "Montant, stock, idempotence, propriété, JWT et tracing", "12 tests service + propriétés API", "Mocks ; MySQL réel absent"],
         ["Partenaire", "Identité, validation, statut, événements", "Tests admin + 2 tests UI", "Service/UI"],
         ["Notification", "4 modèles, parsing, SES, batch failures", "5 Lambda + 6 local", "Client SES simulé"],
         ["Analytics", "Normalisation et clé S3", "2 tests", "Client S3 simulé"],
         ["Migration", "Plan bootstrap/incréments/DELETE", "4 tests", "Pas de RDS réel"],
         ["Metabase init", "Création DB/utilisateur", "1 test", "Connexion simulée"],
         ["Frontend", "Formulaire et idempotency hook", "10 tests + lint/build", "Pas d’E2E navigateur final"],
-        ["CDK", "Invariants réseau/RDS/ECS/Lambda", "5 tests + tsc + synth", "13 stacks, 270 ressources"],
-        ["Docker", "Build images", "4/4", "Pas de scan/registry"],
+        ["CDK", "Réseau, RDS/ECS, ALB, DLQ, dashboard et ADOT", "12 tests + tsc + synth strict", "13 stacks, 276 ressources"],
+        ["Docker", "Build images", "4 images attendues", "Nouveau collector ADOT à revalider"],
     ]
     add_table(doc, ["Domaine", "Comportements couverts", "Preuve", "Limite"], coverage, [1500, 3300, 2300, 2260], font_size=7.9)
     add_callout(
         doc,
         "Bilan",
-        "65 tests backend/services et 10 tests frontend réussissent. Cette couverture réduit le risque de régression locale, mais ne valide ni IAM, ni réseau, ni intégrations managées, ni performance, ni récupération.",
+        "74 tests backend/services et 10 tests frontend réussissent ; 12 tests CDK valident les invariants synthétisés. Cette couverture ne prouve toujours ni IAM/réseau en AWS, ni délivrabilité, performance ou récupération.",
         fill=GREEN_FILL,
         accent=GREEN,
     )
@@ -1730,12 +1737,14 @@ def build_document() -> Path:
     new_page(doc, state)
     add_page_title(doc, "30", "Glossaire et références")
     glossary = [
+        ["ADOT", "AWS Distro for OpenTelemetry, distribution AWS du collector OpenTelemetry."],
         ["AZ", "Availability Zone, domaine de défaillance isolé dans une région."],
         ["CDC", "Change Data Capture, réplication des changements depuis les binlogs."],
         ["CDK", "Cloud Development Kit, infrastructure décrite en TypeScript."],
         ["DLQ", "Dead-letter queue, file recevant les messages après échecs répétés."],
         ["Idempotence", "Même demande répétée : un seul effet métier."],
         ["OAC", "Origin Access Control, accès CloudFront à un bucket S3 privé."],
+        ["OTLP", "OpenTelemetry Protocol utilisé localement pour exporter les spans vers ADOT."],
         ["RPO / RTO", "Perte de données tolérée / délai de restauration toléré."],
         ["SLO", "Objectif mesurable de niveau de service."],
         ["SigV4", "Signature AWS des requêtes API."],
@@ -1760,11 +1769,11 @@ def build_document() -> Path:
     add_para(doc, "Références projet principales", size=11, color=INK, bold=True, after=3)
     add_para(
         doc,
-        "README.md ; infra/README.md ; infra/bin/app.ts ; infra/lib/*.ts ; infra/test/architecture.test.ts ; database/migration_v2.sql ; hotel-ui/src ; services/search-service ; services/reservation-service ; services/lambda.",
+        "README.md ; infra/README.md ; docs/distributed-tracing.md ; infra/bin/app.ts ; infra/lib/*.ts ; infra/test/architecture.test.ts ; database/migration_v2.sql ; hotel-ui/src ; services/search-service ; services/reservation-service ; services/lambda.",
         size=8.6,
         color=MUTED,
     )
-    add_callout(doc, "Fin du document", "La prochaine révision doit intégrer un déploiement DMS complet, la preuve de livraison SES, les mesures de charge et les décisions prises sur les améliorations P0. La recette éphémère partielle de septembre 2026 est désormais prise en compte.")
+    add_callout(doc, "Fin du document", "Révision 1.1 alignée sur le code local au 6 septembre 2026. La prochaine révision devra intégrer les preuves AWS : déploiement DMS, confirmation SNS, livraison SES, traces X-Ray, test des alarmes, mesures de charge et décisions restantes sur les améliorations P0.")
 
     doc.save(OUT)
     return OUT

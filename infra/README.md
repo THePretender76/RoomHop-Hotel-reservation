@@ -20,8 +20,10 @@ CloudFront + WAF
   └─ API Gateway HTTP API (/v1/*)
        └─ VPC Link ──> internal ALB
             ├─ Search ECS/Fargate ──> OpenSearch
-            │                         └─ fallback RDS MySQL
+            │    ├─ fallback RDS MySQL
+            │    └─ ADOT ──> X-Ray VPC endpoint
             └─ Reservation ECS/Fargate ──> RDS MySQL
+                         ├─ ADOT ──> X-Ray VPC endpoint
                          ├─ Cognito partner groups/status
                          └─ EventBridge
                               ├─ SQS notifications ──> Lambda ──> SES
@@ -41,7 +43,7 @@ GitHub ──> CodeConnections + CodePipeline + CodeBuild
 | `RoomHop-OpenSearch` | Domaine OpenSearch privé |
 | `RoomHop-Auth` | Cognito, client SPA et groupes Guest/Partner/SuperAdmin |
 | `RoomHop-Events` | EventBridge, archive, SQS/DLQ, notifications SES et ingestion analytics |
-| `RoomHop-Compute` | Search et Reservation sur ECS/Fargate, ALB interne, ECR, X-Ray |
+| `RoomHop-Compute` | Search et Reservation sur ECS/Fargate, ALB interne, ECR, OpenTelemetry/ADOT vers X-Ray |
 | `RoomHop-Api` | HTTP API, JWT authorizer et VPC Link |
 | `RoomHop-Frontend` | Buckets privés, CloudFront, routage SPA/API/images et WAF |
 | `RoomHop-Analytics` | Glue, Athena et bucket de résultats |
@@ -83,6 +85,14 @@ Points à finaliser une fois l'infrastructure créée:
 5. Ajouter Athena dans Metabase avec la base Glue et le workgroup `roomhop-analytics`; laisser les clés AWS vides afin d'utiliser le rôle IAM de la tâche.
 
 Le premier déploiement des services ne dépend pas d'images déjà présentes dans ECR: les task definitions utilisent des Docker assets CDK. Le pipeline pousse ensuite les versions GitHub dans les repositories ECR et met les trois services ECS à jour.
+
+## Distributed tracing
+
+Search et Reservation utilisent l'API OpenTelemetry et envoient leurs spans en OTLP/HTTP au collector ADOT présent dans la même tâche Fargate. Le collector exporte uniquement les traces vers AWS X-Ray par HTTPS via le VPC endpoint X-Ray privé; aucun NAT Gateway n'est requis. Le collector est `essential: false` et l'application ne dépend pas de son health check: une panne de télémétrie ne rend donc pas la tâche applicative indisponible.
+
+Le sampling est `parentbased_traceidratio`. Son taux est choisi dans `CONFIG.observability.traceSamplingRates` à partir de `CONFIG.environment`: 100 % en développement/test, 50 % en recette et 10 % en production. `TRACING_ENABLED=false` désactive l'initialisation dans l'application.
+
+La configuration, les arbres de spans attendus, les règles de protection des données et la procédure de validation AWS se trouvent dans [../docs/distributed-tracing.md](../docs/distributed-tracing.md).
 
 ## Flux partenaire et e-mail
 

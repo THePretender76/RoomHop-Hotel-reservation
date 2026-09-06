@@ -19,6 +19,8 @@ export interface DmsStackProps extends cdk.StackProps {
 }
 
 export class DmsStack extends cdk.Stack {
+  public readonly replicationInstance: dms.CfnReplicationInstance;
+  public readonly replicationTask: dms.CfnReplicationTask;
   public readonly replicationTaskArn: string;
 
   constructor(scope: Construct, id: string, props: DmsStackProps) {
@@ -78,7 +80,7 @@ export class DmsStack extends cdk.Stack {
       }).subnetIds,
     });
 
-    const replicationInstance = new dms.CfnReplicationInstance(this, 'DmsReplicationInstance', {
+    this.replicationInstance = new dms.CfnReplicationInstance(this, 'DmsReplicationInstance', {
       replicationInstanceIdentifier: `${CONFIG.projectName}-dms-instance`,
       replicationInstanceClass: CONFIG.dms.instanceClass,
       allocatedStorage: CONFIG.dms.allocatedStorage,
@@ -88,8 +90,8 @@ export class DmsStack extends cdk.Stack {
       publiclyAccessible: false,
       autoMinorVersionUpgrade: true,
     });
-    replicationInstance.addResourceDependency(subnetGroup);
-    replicationInstance.node.addDependency(dmsVpcRole);
+    this.replicationInstance.addResourceDependency(subnetGroup);
+    this.replicationInstance.node.addDependency(dmsVpcRole);
 
     const rdsCaCertificate = new dms.CfnCertificate(this, 'RdsCaCertificate', {
       certificateIdentifier: `${CONFIG.projectName}-rds-us-east-1-ca-rsa2048-g1`,
@@ -140,9 +142,9 @@ export class DmsStack extends cdk.Stack {
       })),
     };
 
-    const task = new dms.CfnReplicationTask(this, 'FullLoadAndCdcTask', {
+    this.replicationTask = new dms.CfnReplicationTask(this, 'FullLoadAndCdcTask', {
       replicationTaskIdentifier: `${CONFIG.projectName}-search-cdc`,
-      replicationInstanceArn: replicationInstance.ref,
+      replicationInstanceArn: this.replicationInstance.ref,
       sourceEndpointArn: sourceEndpoint.ref,
       targetEndpointArn: targetEndpoint.ref,
       migrationType: 'full-load-and-cdc',
@@ -166,10 +168,10 @@ export class DmsStack extends cdk.Stack {
         },
       }),
     });
-    task.addResourceDependency(replicationInstance);
-    task.addResourceDependency(sourceEndpoint);
-    task.addResourceDependency(targetEndpoint);
-    task.node.addDependency(dmsLogsRole);
+    this.replicationTask.addResourceDependency(this.replicationInstance);
+    this.replicationTask.addResourceDependency(sourceEndpoint);
+    this.replicationTask.addResourceDependency(targetEndpoint);
+    this.replicationTask.node.addDependency(dmsLogsRole);
 
     // CloudFormation creates DMS tasks stopped; start the initial full-load + CDC automatically.
     const starter = new cr.AwsCustomResource(this, 'StartReplicationTask', {
@@ -177,7 +179,7 @@ export class DmsStack extends cdk.Stack {
         service: 'DMS',
         action: 'startReplicationTask',
         parameters: {
-          ReplicationTaskArn: task.ref,
+          ReplicationTaskArn: this.replicationTask.ref,
           StartReplicationTaskType: 'start-replication',
         },
         physicalResourceId: cr.PhysicalResourceId.of(`${CONFIG.projectName}-search-cdc-start`),
@@ -185,15 +187,15 @@ export class DmsStack extends cdk.Stack {
       policy: cr.AwsCustomResourcePolicy.fromStatements([
         new iam.PolicyStatement({
           actions: ['dms:StartReplicationTask'],
-          resources: [task.ref],
+          resources: [this.replicationTask.ref],
         }),
       ]),
       timeout: cdk.Duration.minutes(2),
     });
-    starter.node.addDependency(task);
+    starter.node.addDependency(this.replicationTask);
 
-    this.replicationTaskArn = task.ref;
-    new cdk.CfnOutput(this, 'DmsReplicationInstanceArn', { value: replicationInstance.ref });
+    this.replicationTaskArn = this.replicationTask.ref;
+    new cdk.CfnOutput(this, 'DmsReplicationInstanceArn', { value: this.replicationInstance.ref });
     new cdk.CfnOutput(this, 'DmsReplicationTaskArn', { value: this.replicationTaskArn });
   }
 }

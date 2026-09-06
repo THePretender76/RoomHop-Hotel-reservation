@@ -1,5 +1,8 @@
 'use strict';
 
+const { shutdownTracing, startTracing, tracingMiddleware } = require('./tracing');
+startTracing();
+
 const express = require('express');
 const cors = require('cors');
 const logger = require('./logger');
@@ -18,6 +21,8 @@ app.use(cors({
 // JSON body parsing
 app.use(express.json());
 
+app.use(tracingMiddleware(() => 'search.request'));
+
 // Health check for ALB target group
 app.get('/health', (req, res) => res.status(200).json({ status: 'healthy', service: 'search-service' }));
 
@@ -30,7 +35,20 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  logger.info('Search service started', { port: PORT });
-});
+function startServer(port = PORT) {
+  return app.listen(port, () => {
+    logger.info('Search service started', { port });
+  });
+}
+
+if (require.main === module) {
+  const server = startServer();
+  const stop = () => server.close(async () => {
+    await shutdownTracing();
+    process.exit(0);
+  });
+  process.once('SIGTERM', stop);
+  process.once('SIGINT', stop);
+}
+
+module.exports = { app, startServer };

@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { CONFIG } from './config';
 
@@ -90,6 +91,17 @@ export class NetworkStack extends cdk.Stack {
       'Allow traffic from ALB on application port'
     );
 
+    const xrayEndpointSg = new ec2.SecurityGroup(this, 'XRayEndpointSg', {
+      vpc: this.vpc,
+      description: 'Security group dedicated to the X-Ray VPC endpoint',
+      allowAllOutbound: false,
+    });
+    xrayEndpointSg.addIngressRule(
+      ecsSg,
+      ec2.Port.tcp(443),
+      'Allow X-Ray HTTPS ingestion from ECS tasks only'
+    );
+
     // RDS SG — accepts traffic only from ECS tasks
     const rdsSg = new ec2.SecurityGroup(this, 'RdsSg', {
       vpc: this.vpc,
@@ -147,7 +159,6 @@ export class NetworkStack extends cdk.Stack {
       { id: 'EventBridgeEndpoint', service: ec2.InterfaceVpcEndpointAwsService.EVENTBRIDGE },
       { id: 'SqsEndpoint', service: ec2.InterfaceVpcEndpointAwsService.SQS },
       { id: 'CognitoIdpEndpoint', service: ec2.InterfaceVpcEndpointAwsService.COGNITO_IDP },
-      { id: 'XRayEndpoint', service: ec2.InterfaceVpcEndpointAwsService.XRAY },
       { id: 'AthenaEndpoint', service: ec2.InterfaceVpcEndpointAwsService.ATHENA },
       { id: 'GlueEndpoint', service: ec2.InterfaceVpcEndpointAwsService.GLUE },
       { id: 'SsmMessagesEndpoint', service: ec2.InterfaceVpcEndpointAwsService.SSM_MESSAGES },
@@ -161,6 +172,19 @@ export class NetworkStack extends cdk.Stack {
         privateDnsEnabled: true,
       });
     }
+
+    const xrayEndpoint = this.vpc.addInterfaceEndpoint('XRayEndpoint', {
+      service: ec2.InterfaceVpcEndpointAwsService.XRAY,
+      subnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [xrayEndpointSg],
+      privateDnsEnabled: true,
+      open: false,
+    });
+    xrayEndpoint.addToPolicy(new iam.PolicyStatement({
+      principals: [new iam.AnyPrincipal()],
+      actions: ['xray:PutTraceSegments'],
+      resources: ['*'],
+    }));
 
     // ─── Outputs ────────────────────────────────────────────────────────────────
     new cdk.CfnOutput(this, 'VpcId', { value: this.vpc.vpcId });

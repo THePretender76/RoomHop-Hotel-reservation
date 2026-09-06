@@ -1,17 +1,25 @@
 'use strict';
 
-/**
- * API Gateway is the cryptographic JWT verifier for this private ALB service.
- * This middleware validates the already-verified claims needed for ownership
- * and group authorization. The ALB security group only accepts the VPC Link.
- */
-function decodeJwtPayload(token) {
-  const segments = String(token || '').split('.');
-  if (segments.length !== 3) {
-    throw new Error('Malformed JWT');
+const { CognitoJwtVerifier } = require('aws-jwt-verify');
+const { annotate, markSpanError, withSpan } = require('../tracing');
+
+let cognitoVerifier;
+
+function defaultVerifier() {
+  if (cognitoVerifier) return cognitoVerifier;
+
+  const userPoolId = process.env.COGNITO_USER_POOL_ID;
+  const clientId = process.env.COGNITO_CLIENT_ID;
+  if (!userPoolId || !clientId) {
+    throw new Error('COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID must be configured');
   }
 
-  return JSON.parse(Buffer.from(segments[1], 'base64url').toString('utf8'));
+  cognitoVerifier = CognitoJwtVerifier.create({
+    userPoolId,
+    clientId,
+    tokenUse: 'id',
+  });
+  return cognitoVerifier;
 }
 
 function groupsFrom(payload) {
@@ -23,49 +31,55 @@ function groupsFrom(payload) {
   return [];
 }
 
-function authenticate(req, res, next) {
-  const authorization = req.get('authorization') || '';
-  const match = authorization.match(/^Bearer\s+([^\s]+)$/i);
-  if (!match) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
+function createAuthenticator(verifierProvider = defaultVerifier) {
+  return async function authenticateRequest(req, res, next) {
+    const outcome = await withSpan('auth.verify', { autoStatus: false }, async (span) => {
+      const authorization = req.get('authorization') || '';
+      const match = authorization.match(/^Bearer\s+([^\s]+)$/i);
+      if (!match) {
+        annotate(span, { auth_valid: false, error_type: 'auth_missing' });
+        markSpanError(span, 'auth_missing');
+        return { status: 401, error: 'Authentication required' };
+      }
 
-  try {
-    const payload = decodeJwtPayload(match[1]);
-    const now = Math.floor(Date.now() / 1000);
-    const expectedIssuer = process.env.COGNITO_USER_POOL_ID
-      ? `https://cognito-idp.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}`
-      : null;
+      try {
+        const payload = await verifierProvider().verify(match[1]);
 
-    if (!payload.sub || (payload.exp && payload.exp <= now)) {
-      throw new Error('Expired or incomplete JWT');
-    }
-    if (expectedIssuer && payload.iss !== expectedIssuer) {
-      throw new Error('Unexpected token issuer');
-    }
-    if (process.env.COGNITO_CLIENT_ID && payload.aud !== process.env.COGNITO_CLIENT_ID) {
-      throw new Error('Unexpected token audience');
-    }
+        const user = {
+          sub: payload.sub,
+          username: payload['cognito:username'] || payload.username || payload.sub,
+          email: payload.email,
+          groups: groupsFrom(payload),
+        };
+        annotate(span, { auth_valid: true });
+        return { user };
+      } catch {
+        annotate(span, { auth_valid: false, error_type: 'auth_invalid' });
+        markSpanError(span, 'auth_invalid');
+        return { status: 401, error: 'Invalid authentication token' };
+      }
+    });
 
-    req.user = {
-      sub: payload.sub,
-      username: payload['cognito:username'] || payload.username || payload.sub,
-      email: payload.email,
-      groups: groupsFrom(payload),
-    };
-    return next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid authentication token' });
-  }
-}
-
-function requireGroup(groupName) {
-  return (req, res, next) => {
-    if (!req.user?.groups?.includes(groupName)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
+    if (outcome.error) return res.status(outcome.status).json({ error: outcome.error });
+    req.user = outcome.user;
     return next();
   };
 }
 
-module.exports = { authenticate, requireGroup, decodeJwtPayload, groupsFrom };
+const authenticate = createAuthenticator();
+
+function requireGroup(groupName) {
+  return (req, res, next) => {
+    const authorized = withSpan('auth.authorize', { autoStatus: false }, (span) => {
+      if (!req.user?.groups?.includes(groupName)) {
+        markSpanError(span, 'authorization_denied');
+        return false;
+      }
+      return true;
+    });
+    if (!authorized) return res.status(403).json({ error: 'Insufficient permissions' });
+    return next();
+  };
+}
+
+module.exports = { authenticate, createAuthenticator, groupsFrom, requireGroup };

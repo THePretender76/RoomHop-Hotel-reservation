@@ -221,6 +221,7 @@ export class MetabaseStack extends cdk.Stack {
       loadBalancer: props.alb,
       port: 8080,
       protocol: elbv2.ApplicationProtocol.HTTP,
+      open: false,
       defaultAction: elbv2.ListenerAction.forward([targetGroup]),
     });
 

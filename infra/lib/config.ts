@@ -17,6 +17,20 @@ export const CONFIG = {
     reservationService: { cpu: 512, memory: 1024, desiredCount: 1 },
     metabaseService: { cpu: 1024, memory: 2048, desiredCount: 1 },
   },
+  observability: {
+    traceSamplingRates: {
+      development: 1,
+      dev: 1,
+      test: 1,
+      staging: 0.5,
+      recette: 0.5,
+      production: 0.1,
+      prod: 0.1,
+    } as Record<string, number>,
+  },
+  notifications: {
+    operationsEmail: 'thenewpretender76@outlook.com',
+  },
   opensearch: {
     domainName: 'roomhop-search',
     instanceType: 't3.small.search',

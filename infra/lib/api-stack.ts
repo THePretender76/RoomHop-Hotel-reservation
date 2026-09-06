@@ -20,6 +20,7 @@ export interface ApiStackProps extends cdk.StackProps {
 
 export class ApiStack extends cdk.Stack {
   public readonly apiEndpoint: string;
+  public readonly httpApi: apigatewayv2.HttpApi;
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
@@ -36,7 +37,7 @@ export class ApiStack extends cdk.Stack {
     });
 
     // ─── HTTP API ───────────────────────────────────────────────────────────────
-    const httpApi = new apigatewayv2.HttpApi(this, 'RoomHopHttpApi', {
+    this.httpApi = new apigatewayv2.HttpApi(this, 'RoomHopHttpApi', {
       apiName: `${CONFIG.projectName}-api`,
       description: 'RoomHop Hotel Management HTTP API',
       corsPreflight: {
@@ -74,28 +75,28 @@ export class ApiStack extends cdk.Stack {
 
     // ─── Routes ─────────────────────────────────────────────────────────────────
     // Search routes (public read, auth optional for personalized results)
-    httpApi.addRoutes({
+    this.httpApi.addRoutes({
       path: '/v1/search',
       methods: [apigatewayv2.HttpMethod.GET],
       integration: albIntegration,
       // Search is public — no authorizer
     });
 
-    httpApi.addRoutes({
+    this.httpApi.addRoutes({
       path: '/v1/search/{proxy+}',
       methods: [apigatewayv2.HttpMethod.GET],
       integration: albIntegration,
     });
 
     // Reservation routes (authenticated)
-    httpApi.addRoutes({
+    this.httpApi.addRoutes({
       path: '/v1/reservations',
       methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
       integration: albIntegration,
       authorizer: jwtAuthorizer,
     });
 
-    httpApi.addRoutes({
+    this.httpApi.addRoutes({
       path: '/v1/reservations/{proxy+}',
       methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.DELETE, apigatewayv2.HttpMethod.PUT],
       integration: albIntegration,
@@ -104,7 +105,7 @@ export class ApiStack extends cdk.Stack {
 
     // ─── Admin routes (authenticated — group enforcement is in the backend) ────
     // Partner onboarding application (requires HotelPartnerPending group)
-    httpApi.addRoutes({
+    this.httpApi.addRoutes({
       path: '/v1/admin/partners/applications',
       methods: [apigatewayv2.HttpMethod.POST, apigatewayv2.HttpMethod.GET],
       integration: albIntegration,
@@ -112,7 +113,7 @@ export class ApiStack extends cdk.Stack {
     });
 
     // Partner application review (requires SuperAdmin group)
-    httpApi.addRoutes({
+    this.httpApi.addRoutes({
       path: '/v1/admin/partners/applications/{proxy+}',
       methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.PUT],
       integration: albIntegration,
@@ -120,7 +121,7 @@ export class ApiStack extends cdk.Stack {
     });
 
     // Composite property creation (requires HotelPartner group)
-    httpApi.addRoutes({
+    this.httpApi.addRoutes({
       path: '/v1/admin/hotels/complete',
       methods: [apigatewayv2.HttpMethod.POST],
       integration: albIntegration,
@@ -128,7 +129,7 @@ export class ApiStack extends cdk.Stack {
     });
 
     // Hotel management (update, delete, add rooms)
-    httpApi.addRoutes({
+    this.httpApi.addRoutes({
       path: '/v1/admin/hotels/{proxy+}',
       methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.PUT, apigatewayv2.HttpMethod.DELETE, apigatewayv2.HttpMethod.POST],
       integration: albIntegration,
@@ -136,18 +137,18 @@ export class ApiStack extends cdk.Stack {
     });
 
     // Room type management
-    httpApi.addRoutes({
+    this.httpApi.addRoutes({
       path: '/v1/admin/room-types/{proxy+}',
       methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.PUT, apigatewayv2.HttpMethod.DELETE],
       integration: albIntegration,
       authorizer: jwtAuthorizer,
     });
 
-    this.apiEndpoint = httpApi.apiEndpoint;
+    this.apiEndpoint = this.httpApi.apiEndpoint;
 
     // ─── Outputs ────────────────────────────────────────────────────────────────
     new cdk.CfnOutput(this, 'ApiEndpoint', {
-      value: httpApi.apiEndpoint,
+      value: this.httpApi.apiEndpoint,
       description: 'HTTP API endpoint URL',
     });
 

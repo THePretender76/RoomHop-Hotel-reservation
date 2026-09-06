@@ -15,7 +15,7 @@ import { CONFIG } from './config';
 export interface PipelineStackProps extends cdk.StackProps {
   searchRepository: ecr.IRepository;
   reservationRepository: ecr.IRepository;
-  xrayRepository: ecr.IRepository;
+  collectorRepository: ecr.IRepository;
   metabaseRepository: ecr.IRepository;
   searchService: ecs.IBaseService;
   reservationService: ecs.IBaseService;
@@ -120,7 +120,7 @@ export class PipelineStack extends cdk.Stack {
         environmentVariables: {
           SEARCH_REPOSITORY_URI: { value: props.searchRepository.repositoryUri },
           RESERVATION_REPOSITORY_URI: { value: props.reservationRepository.repositoryUri },
-          XRAY_REPOSITORY_URI: { value: props.xrayRepository.repositoryUri },
+          COLLECTOR_REPOSITORY_URI: { value: props.collectorRepository.repositoryUri },
           METABASE_REPOSITORY_URI: { value: props.metabaseRepository.repositoryUri },
         },
       },
@@ -138,18 +138,18 @@ export class PipelineStack extends cdk.Stack {
             commands: [
               'docker build -t "$SEARCH_REPOSITORY_URI:$IMAGE_TAG" services/search-service',
               'docker build -t "$RESERVATION_REPOSITORY_URI:$IMAGE_TAG" services/reservation-service',
-              'docker build -t "$XRAY_REPOSITORY_URI:$IMAGE_TAG" infra/docker/xray',
+              'docker build -t "$COLLECTOR_REPOSITORY_URI:$IMAGE_TAG" infra/docker/adot',
               'docker build -t "$METABASE_REPOSITORY_URI:$IMAGE_TAG" infra/docker/metabase',
               'docker push "$SEARCH_REPOSITORY_URI:$IMAGE_TAG"',
               'docker push "$RESERVATION_REPOSITORY_URI:$IMAGE_TAG"',
-              'docker push "$XRAY_REPOSITORY_URI:$IMAGE_TAG"',
+              'docker push "$COLLECTOR_REPOSITORY_URI:$IMAGE_TAG"',
               'docker push "$METABASE_REPOSITORY_URI:$IMAGE_TAG"',
             ],
           },
           post_build: {
             commands: [
-              `printf '[{"name":"SearchContainer","imageUri":"%s"},{"name":"SearchXRayDaemon","imageUri":"%s"}]' "$SEARCH_REPOSITORY_URI:$IMAGE_TAG" "$XRAY_REPOSITORY_URI:$IMAGE_TAG" > search-images.json`,
-              `printf '[{"name":"ReservationContainer","imageUri":"%s"},{"name":"ReservationXRayDaemon","imageUri":"%s"}]' "$RESERVATION_REPOSITORY_URI:$IMAGE_TAG" "$XRAY_REPOSITORY_URI:$IMAGE_TAG" > reservation-images.json`,
+              `printf '[{"name":"SearchContainer","imageUri":"%s"},{"name":"SearchAdotCollector","imageUri":"%s"}]' "$SEARCH_REPOSITORY_URI:$IMAGE_TAG" "$COLLECTOR_REPOSITORY_URI:$IMAGE_TAG" > search-images.json`,
+              `printf '[{"name":"ReservationContainer","imageUri":"%s"},{"name":"ReservationAdotCollector","imageUri":"%s"}]' "$RESERVATION_REPOSITORY_URI:$IMAGE_TAG" "$COLLECTOR_REPOSITORY_URI:$IMAGE_TAG" > reservation-images.json`,
               `printf '[{"name":"MetabaseContainer","imageUri":"%s"}]' "$METABASE_REPOSITORY_URI:$IMAGE_TAG" > metabase-images.json`,
             ],
           },
@@ -161,7 +161,7 @@ export class PipelineStack extends cdk.Stack {
     });
     props.searchRepository.grantPullPush(imageBuild);
     props.reservationRepository.grantPullPush(imageBuild);
-    props.xrayRepository.grantPullPush(imageBuild);
+    props.collectorRepository.grantPullPush(imageBuild);
     props.metabaseRepository.grantPullPush(imageBuild);
 
     const frontendBuild = new codebuild.PipelineProject(this, 'FrontendBuild', {

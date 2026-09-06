@@ -16,8 +16,10 @@ export interface DatabaseStackProps extends cdk.StackProps {
 }
 
 export class DatabaseStack extends cdk.Stack {
+  public readonly database: rds.DatabaseInstance;
   public readonly dbSecret: secretsmanager.ISecret;
   public readonly dbEndpoint: string;
+  public readonly migrationLambda: lambda.Function;
 
   constructor(scope: Construct, id: string, props: DatabaseStackProps) {
     super(scope, id, props);
@@ -27,7 +29,7 @@ export class DatabaseStack extends cdk.Stack {
     // ─── RDS MySQL 8.0 Single-AZ (intentional project constraint) ──────────
     // Credentials auto-generated and stored in Secrets Manager.
     // Placed in private isolated subnets — no public accessibility.
-    const dbInstance = new rds.DatabaseInstance(this, 'RoomHopDb', {
+    this.database = new rds.DatabaseInstance(this, 'RoomHopDb', {
       engine: rds.DatabaseInstanceEngine.mysql({
         version: rds.MysqlEngineVersion.VER_8_0_46,
       }),
@@ -66,8 +68,8 @@ export class DatabaseStack extends cdk.Stack {
       }),
     });
 
-    this.dbSecret = dbInstance.secret!;
-    this.dbEndpoint = dbInstance.dbInstanceEndpointAddress;
+    this.dbSecret = this.database.secret!;
+    this.dbEndpoint = this.database.dbInstanceEndpointAddress;
 
     // ─── Database Migration Lambda ──────────────────────────────────────────────
     // Runs migration SQL on stack CREATE. Uses a Custom Resource so it executes
@@ -79,7 +81,7 @@ export class DatabaseStack extends cdk.Stack {
       retention: logs.RetentionDays.ONE_WEEK,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
-    const migrationLambda = new lambda.Function(this, 'DbMigrationFn', {
+    this.migrationLambda = new lambda.Function(this, 'DbMigrationFn', {
       functionName: `${CONFIG.projectName}-db-migration`,
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
@@ -90,14 +92,14 @@ export class DatabaseStack extends cdk.Stack {
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [securityGroups.lambdaSg],
       environment: {
-        DB_SECRET_ARN: dbInstance.secret!.secretArn,
+        DB_SECRET_ARN: this.database.secret!.secretArn,
         DB_NAME: CONFIG.rds.databaseName,
       },
       logGroup: migrationLogGroup,
     });
 
     // Grant the migration Lambda access to read the DB secret
-    dbInstance.secret!.grantRead(migrationLambda);
+    this.database.secret!.grantRead(this.migrationLambda);
 
     // Allow the Lambda SG to connect to RDS on MySQL port
     securityGroups.rdsSg.addIngressRule(
@@ -113,7 +115,7 @@ export class DatabaseStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
     const migrationProvider = new cr.Provider(this, 'DbMigrationProvider', {
-      onEventHandler: migrationLambda,
+      onEventHandler: this.migrationLambda,
       logGroup: migrationProviderLogs,
     });
 
@@ -127,7 +129,7 @@ export class DatabaseStack extends cdk.Stack {
     });
 
     // Ensure migration runs AFTER RDS is ready
-    migrationResource.node.addDependency(dbInstance);
+    migrationResource.node.addDependency(this.database);
 
     // ─── Outputs ────────────────────────────────────────────────────────────────
     new cdk.CfnOutput(this, 'DbEndpoint', {

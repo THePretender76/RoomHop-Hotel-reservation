@@ -8,6 +8,10 @@ import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import { Construct } from 'constructs';
 import { CONFIG } from './config';
 
@@ -16,6 +20,12 @@ export class EventsStack extends cdk.Stack {
   public readonly eventBus: events.EventBus;
   public readonly notificationQueue: sqs.Queue;
   public readonly analyticsQueue: sqs.Queue;
+  public readonly notificationDlq: sqs.Queue;
+  public readonly analyticsDlq: sqs.Queue;
+  public readonly notificationLambda: lambda.Function;
+  public readonly analyticsLambda: lambda.Function;
+  public readonly notificationDlqAlarm: cloudwatch.Alarm;
+  public readonly analyticsDlqAlarm: cloudwatch.Alarm;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -52,7 +62,7 @@ export class EventsStack extends cdk.Stack {
       retention: cdk.Duration.days(365),
     });
 
-    const notificationDlq = new sqs.Queue(this, 'NotificationDlq', {
+    this.notificationDlq = new sqs.Queue(this, 'NotificationDlq', {
       queueName: `${CONFIG.projectName}-notification-dlq`,
       retentionPeriod: cdk.Duration.days(14),
       encryption: sqs.QueueEncryption.SQS_MANAGED,
@@ -64,22 +74,52 @@ export class EventsStack extends cdk.Stack {
       retentionPeriod: cdk.Duration.days(7),
       encryption: sqs.QueueEncryption.SQS_MANAGED,
       enforceSSL: true,
-      deadLetterQueue: { queue: notificationDlq, maxReceiveCount: 3 },
+      deadLetterQueue: { queue: this.notificationDlq, maxReceiveCount: 3 },
     });
 
-    const analyticsDlq = new sqs.Queue(this, 'AnalyticsDlq', {
+    this.analyticsDlq = new sqs.Queue(this, 'AnalyticsDlq', {
       queueName: `${CONFIG.projectName}-analytics-dlq`,
       retentionPeriod: cdk.Duration.days(14),
       encryption: sqs.QueueEncryption.SQS_MANAGED,
       enforceSSL: true,
     });
+
+    const dlqAlertTopic = new sns.Topic(this, 'DlqAlertTopic', {
+      topicName: `${CONFIG.projectName}-dlq-alerts`,
+      displayName: 'RoomHop DLQ alerts',
+    });
+    dlqAlertTopic.addSubscription(new snsSubscriptions.EmailSubscription(
+      CONFIG.notifications.operationsEmail
+    ));
+
+    const addDlqAlarm = (id: string, queue: sqs.Queue): cloudwatch.Alarm => {
+      const alarm = new cloudwatch.Alarm(this, id, {
+        alarmName: `${queue.queueName}-has-messages`,
+        alarmDescription: `At least one message is waiting in ${queue.queueName}`,
+        metric: queue.metricApproximateNumberOfMessagesVisible({
+          period: cdk.Duration.minutes(1),
+          statistic: cloudwatch.Stats.MAXIMUM,
+        }),
+        threshold: 1,
+        evaluationPeriods: 1,
+        datapointsToAlarm: 1,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
+      alarm.addAlarmAction(new cloudwatchActions.SnsAction(dlqAlertTopic));
+      return alarm;
+    };
+
+    this.notificationDlqAlarm = addDlqAlarm('NotificationDlqAlarm', this.notificationDlq);
+    this.analyticsDlqAlarm = addDlqAlarm('AnalyticsDlqAlarm', this.analyticsDlq);
+
     this.analyticsQueue = new sqs.Queue(this, 'AnalyticsQueue', {
       queueName: `${CONFIG.projectName}-analytics-queue`,
       visibilityTimeout: cdk.Duration.seconds(180),
       retentionPeriod: cdk.Duration.days(7),
       encryption: sqs.QueueEncryption.SQS_MANAGED,
       enforceSSL: true,
-      deadLetterQueue: { queue: analyticsDlq, maxReceiveCount: 3 },
+      deadLetterQueue: { queue: this.analyticsDlq, maxReceiveCount: 3 },
     });
 
     const bookingRule = new events.Rule(this, 'BookingEventsRule', {
@@ -110,7 +150,7 @@ export class EventsStack extends cdk.Stack {
       retention: logs.RetentionDays.ONE_MONTH,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
-    const notificationLambda = new lambda.Function(this, 'NotificationHandler', {
+    this.notificationLambda = new lambda.Function(this, 'NotificationHandler', {
       functionName: `${CONFIG.projectName}-notification-handler`,
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
@@ -123,7 +163,7 @@ export class EventsStack extends cdk.Stack {
       },
       logGroup: notificationLogGroup,
     });
-    notificationLambda.addToRolePolicy(new iam.PolicyStatement({
+    this.notificationLambda.addToRolePolicy(new iam.PolicyStatement({
       actions: ['ses:SendEmail', 'ses:SendRawEmail'],
       resources: [cdk.Stack.of(this).formatArn({
         service: 'ses',
@@ -131,7 +171,7 @@ export class EventsStack extends cdk.Stack {
         resourceName: senderEmail.valueAsString,
       })],
     }));
-    notificationLambda.addEventSource(new lambdaEventSources.SqsEventSource(this.notificationQueue, {
+    this.notificationLambda.addEventSource(new lambdaEventSources.SqsEventSource(this.notificationQueue, {
       batchSize: 10,
       maxBatchingWindow: cdk.Duration.seconds(5),
       reportBatchItemFailures: true,
@@ -142,7 +182,7 @@ export class EventsStack extends cdk.Stack {
       retention: logs.RetentionDays.ONE_MONTH,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
-    const analyticsLambda = new lambda.Function(this, 'AnalyticsHandler', {
+    this.analyticsLambda = new lambda.Function(this, 'AnalyticsHandler', {
       functionName: `${CONFIG.projectName}-analytics-handler`,
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
@@ -155,8 +195,8 @@ export class EventsStack extends cdk.Stack {
       },
       logGroup: analyticsLogGroup,
     });
-    this.analyticsBucket.grantWrite(analyticsLambda);
-    analyticsLambda.addEventSource(new lambdaEventSources.SqsEventSource(this.analyticsQueue, {
+    this.analyticsBucket.grantWrite(this.analyticsLambda);
+    this.analyticsLambda.addEventSource(new lambdaEventSources.SqsEventSource(this.analyticsQueue, {
       batchSize: 10,
       maxBatchingWindow: cdk.Duration.seconds(30),
       reportBatchItemFailures: true,
