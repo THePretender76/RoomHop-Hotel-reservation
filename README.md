@@ -21,20 +21,6 @@ L'application AWS est déjà déployée. La migration VPC Origin est préparée 
 
 <img width="2330" height="1881" alt="RoomHop_AWS architecture diagram drawio" src="https://github.com/user-attachments/assets/2a3ffef9-910b-460b-b577-942529e51816" />
 
-```text
-Browser --> CloudFront + WAF --> OAC --> private S3 SPA / images
-                   |
-                   +--> VPC Origin --> internal ALB :80
-                                        |-- /v1/search* --> Search ECS
-                                        |-- /v1/reservations*, /v1/admin* --> Reservation ECS (Cognito JWT)
-                                        +-- /analytics/* --> Metabase ECS (session login)
-
-RDS Single-AZ ── DMS full-load + CDC ──> OpenSearch
-Reservation ── EventBridge ──> SQS ──> Lambda ──> SES / S3
-S3 analytics ──actual data──> Athena ──> Metabase ECS
-      └─> Glue Crawler (hourly) ──> Glue Catalog ──schema/partitions──> Athena
-GitHub ──> CodeConnections + CodePipeline + CodeBuild
-```
 
 Contraintes intentionnelles:
 
