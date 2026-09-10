@@ -84,6 +84,10 @@ export class ComputeStack extends cdk.Stack {
       }),
     });
 
+    if (this.node.tryGetContext('retainLegacyIngress') === 'true') {
+      this.exportValue(this.albListener.listenerArn);
+    }
+
     const executionRole = new iam.Role(this, 'TaskExecutionRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
       managedPolicies: [

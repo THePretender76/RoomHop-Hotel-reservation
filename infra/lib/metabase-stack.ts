@@ -1,8 +1,4 @@
 import * as cdk from 'aws-cdk-lib';
-import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
-import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
@@ -25,20 +21,22 @@ export interface MetabaseStackProps extends cdk.StackProps {
   dbEndpoint: string;
   cluster: ecs.ICluster;
   alb: elbv2.ApplicationLoadBalancer;
+  albListener: elbv2.ApplicationListener;
   analyticsBucket: s3.IBucket;
   athenaResultsBucket: s3.IBucket;
+  athenaWorkgroupName: string;
   glueDatabaseName: string;
-  wafAclArn: string;
+  cloudFrontUrl: string;
 }
 
 export class MetabaseStack extends cdk.Stack {
   public readonly metabaseRepository: ecr.Repository;
   public readonly metabaseService: ecs.FargateService;
-  public readonly distribution: cloudfront.Distribution;
   public readonly metabaseUrl: string;
 
   constructor(scope: Construct, id: string, props: MetabaseStackProps) {
     super(scope, id, props);
+    this.metabaseUrl = `${props.cloudFrontUrl}/analytics/`;
 
     const metabaseSecret = new secretsmanager.Secret(this, 'MetabaseDbSecret', {
       secretName: `${CONFIG.projectName}/metabase/credentials`,
@@ -130,16 +128,51 @@ export class MetabaseStack extends cdk.Stack {
       ],
       resources: ['*'],
     }));
-    props.analyticsBucket.grantRead(taskRole);
-    props.athenaResultsBucket.grantReadWrite(taskRole);
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['s3:GetBucketLocation'],
+      resources: [props.analyticsBucket.bucketArn, props.athenaResultsBucket.bucketArn],
+    }));
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['s3:ListBucket'],
+      resources: [props.analyticsBucket.bucketArn],
+      conditions: { StringLike: { 's3:prefix': ['reservations', 'reservations/*'] } },
+    }));
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject'],
+      resources: [props.analyticsBucket.arnForObjects('reservations/*')],
+    }));
+    // The workgroup enforces query-results/ even when an existing Metabase
+    // connection supplies the historical metabase/ staging directory.
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['s3:ListBucket', 's3:ListBucketMultipartUploads'],
+      resources: [props.athenaResultsBucket.bucketArn],
+    }));
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject', 's3:PutObject', 's3:AbortMultipartUpload', 's3:ListMultipartUploadParts'],
+      resources: [props.athenaResultsBucket.arnForObjects('query-results/*')],
+    }));
     taskRole.addToPolicy(new iam.PolicyStatement({
       actions: [
         'athena:StartQueryExecution',
+        'athena:BatchGetQueryExecution',
         'athena:GetQueryExecution',
         'athena:GetQueryResults',
+        'athena:GetQueryResultsStream',
         'athena:StopQueryExecution',
         'athena:GetWorkGroup',
+        'athena:CreatePreparedStatement',
+        'athena:GetPreparedStatement',
+        'athena:DeletePreparedStatement',
       ],
+      resources: [this.formatArn({ service: 'athena', resource: 'workgroup', resourceName: props.athenaWorkgroupName })],
+    }));
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['athena:GetDataCatalog', 'athena:ListDatabases', 'athena:GetDatabase', 'athena:ListTableMetadata', 'athena:GetTableMetadata'],
+      resources: [this.formatArn({ service: 'athena', resource: 'datacatalog', resourceName: 'AwsDataCatalog' })],
+    }));
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      // These discovery APIs do not support resource-level IAM permissions.
+      actions: ['athena:ListDataCatalogs', 'athena:ListWorkGroups'],
       resources: ['*'],
     }));
     taskRole.addToPolicy(new iam.PolicyStatement({
@@ -150,8 +183,15 @@ export class MetabaseStack extends cdk.Stack {
         'glue:GetTables',
         'glue:GetPartition',
         'glue:GetPartitions',
+        'glue:BatchGetPartition',
+        'glue:GetTableVersion',
+        'glue:GetTableVersions',
       ],
-      resources: ['*'],
+      resources: [
+        this.formatArn({ service: 'glue', resource: 'catalog' }),
+        this.formatArn({ service: 'glue', resource: 'database', resourceName: props.glueDatabaseName }),
+        this.formatArn({ service: 'glue', resource: 'table', resourceName: `${props.glueDatabaseName}/reservations` }),
+      ],
     }));
 
     const logGroup = new logs.LogGroup(this, 'MetabaseLogs', {
@@ -174,6 +214,7 @@ export class MetabaseStack extends cdk.Stack {
         MB_DB_PORT: String(CONFIG.rds.port),
         MB_DB_DBNAME: 'metabase_db',
         MB_JETTY_PORT: '3000',
+        MB_SITE_URL: this.metabaseUrl,
         MB_ANON_TRACKING_ENABLED: 'false',
         AWS_REGION: CONFIG.region,
         ROOMHOP_ATHENA_DATABASE: props.glueDatabaseName,
@@ -217,49 +258,22 @@ export class MetabaseStack extends cdk.Stack {
       deregistrationDelay: cdk.Duration.seconds(30),
       stickinessCookieDuration: cdk.Duration.days(1),
     });
-    const listener = new elbv2.ApplicationListener(this, 'MetabaseListener', {
-      loadBalancer: props.alb,
-      port: 8080,
-      protocol: elbv2.ApplicationProtocol.HTTP,
-      open: false,
-      defaultAction: elbv2.ListenerAction.forward([targetGroup]),
+    const analyticsRule = new elbv2.ApplicationListenerRule(this, 'AnalyticsRule', {
+      listener: props.albListener,
+      priority: 30,
+      conditions: [elbv2.ListenerCondition.pathPatterns(['/analytics/*'])],
+      targetGroups: [targetGroup],
     });
-
-    const vpcLink = new apigwv2.VpcLink(this, 'MetabaseVpcLink', {
-      vpc: props.vpc,
-      subnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
-      securityGroups: [props.securityGroups.vpcLinkSg],
-      vpcLinkName: `${CONFIG.projectName}-metabase-vpc-link`,
-    });
-    const api = new apigwv2.HttpApi(this, 'MetabaseHttpApi', {
-      apiName: `${CONFIG.projectName}-metabase-api`,
-      defaultIntegration: new integrations.HttpAlbIntegration('MetabaseAlbIntegration', listener, {
-        vpcLink,
-      }),
-    });
-
-    const apiDomain = cdk.Fn.select(2, cdk.Fn.split('/', api.apiEndpoint));
-    this.distribution = new cloudfront.Distribution(this, 'MetabaseDistribution', {
-      comment: 'RoomHop Metabase dashboard',
-      webAclId: props.wafAclArn,
-      defaultBehavior: {
-        origin: new origins.HttpOrigin(apiDomain, {
-          protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
-          readTimeout: cdk.Duration.seconds(60),
-        }),
-        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-        originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-      },
-      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
-      httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
-    });
-    this.metabaseUrl = `https://${this.distribution.distributionDomainName}`;
+    // CDK 2.268 exposes ALB URL transforms through L1 only. Match the external
+    // prefix first, then strip it for Metabase's existing root-based handlers.
+    (analyticsRule.node.defaultChild as elbv2.CfnListenerRule).transforms = [{
+      type: 'url-rewrite',
+      urlRewriteConfig: { rewrites: [{ regex: '^/analytics/(.*)$', replace: '/$1' }] },
+    }];
 
     new cdk.CfnOutput(this, 'MetabaseUrl', {
       value: this.metabaseUrl,
-      description: 'Set this value as MB_SITE_URL after the first deployment.',
+      description: 'Metabase on the RoomHop domain; MB_SITE_URL is configured automatically.',
     });
     new cdk.CfnOutput(this, 'MetabaseRepositoryUri', { value: this.metabaseRepository.repositoryUri });
     new cdk.CfnOutput(this, 'MetabaseServiceName', { value: this.metabaseService.serviceName });

@@ -3,7 +3,7 @@ import * as cloudtrail from 'aws-cdk-lib/aws-cloudtrail';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as accessanalyzer from 'aws-cdk-lib/aws-accessanalyzer';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as dms from 'aws-cdk-lib/aws-dms';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
@@ -21,7 +21,7 @@ import {
 } from './constructs/roomhop-operations-dashboard';
 
 export interface ObservabilityStackProps extends cdk.StackProps {
-  readonly httpApi: apigatewayv2.IHttpApi;
+  readonly alb: elbv2.IApplicationLoadBalancer;
   readonly cluster: ecs.ICluster;
   readonly ecsServices: NamedEcsService[];
   readonly database: rds.IDatabaseInstance;
@@ -86,7 +86,7 @@ export class ObservabilityStack extends cdk.Stack {
     });
 
     new RoomHopOperationsDashboard(this, 'OperationsDashboard', {
-      httpApi: props.httpApi,
+      alb: props.alb,
       cluster: props.cluster,
       ecsServices: props.ecsServices,
       database: props.database,

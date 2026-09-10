@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as dms from 'aws-cdk-lib/aws-dms';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
@@ -26,7 +26,7 @@ export interface NamedFunction {
 }
 
 export interface RoomHopOperationsDashboardProps {
-  readonly httpApi: apigatewayv2.IHttpApi;
+  readonly alb: elbv2.IApplicationLoadBalancer;
   readonly cluster: ecs.ICluster;
   readonly ecsServices: NamedEcsService[];
   readonly database: rds.IDatabaseInstance;
@@ -53,20 +53,20 @@ export class RoomHopOperationsDashboard extends Construct {
       periodOverride: cloudwatch.PeriodOverride.INHERIT,
     });
 
-    const apiRequests = props.httpApi.metricCount({
+    const apiRequests = props.alb.metrics.requestCount({
       period: PERIOD,
       statistic: cloudwatch.Stats.SUM,
-      label: 'Requests',
+      label: 'Requests forwarded to targets',
     });
-    const apiClientErrors = props.httpApi.metricClientError({
+    const apiClientErrors = props.alb.metrics.httpCodeTarget(elbv2.HttpCodeTarget.TARGET_4XX_COUNT, {
       period: PERIOD,
       statistic: cloudwatch.Stats.SUM,
-      label: '4xx',
+      label: 'Target 4xx',
     });
-    const apiServerErrors = props.httpApi.metricServerError({
+    const apiServerErrors = props.alb.metrics.httpCodeTarget(elbv2.HttpCodeTarget.TARGET_5XX_COUNT, {
       period: PERIOD,
       statistic: cloudwatch.Stats.SUM,
-      label: '5xx',
+      label: 'Target 5xx',
     });
     const apiErrorRate = new cloudwatch.MathExpression({
       expression: 'IF(requests > 0, 100 * (clientErrors + serverErrors) / requests, 0)',
@@ -76,7 +76,7 @@ export class RoomHopOperationsDashboard extends Construct {
         serverErrors: apiServerErrors,
       },
       period: PERIOD,
-      label: 'API error rate (%)',
+      label: 'Target error rate (%)',
     });
 
     const dlqMetrics = Object.fromEntries(props.deadLetterQueues.map(({ queue }, index) => [
@@ -95,7 +95,7 @@ export class RoomHopOperationsDashboard extends Construct {
 
     this.addHeaderAndAlarms(props.dlqAlarms);
     this.addOverview(apiRequests, apiErrorRate, totalDlqMessages, props.functions);
-    this.addApiSection(props.httpApi, apiRequests, apiClientErrors, apiServerErrors, apiErrorRate);
+    this.addApiSection(props.alb, apiRequests, apiClientErrors, apiServerErrors, apiErrorRate);
     this.addEcsSection(props.cluster, props.ecsServices);
     this.addDataSection(props.database, props.searchDomain);
     this.addMessagingSection(props.queues, props.deadLetterQueues, totalDlqMessages);
@@ -137,13 +137,13 @@ export class RoomHopOperationsDashboard extends Construct {
       new cloudwatch.SingleValueWidget({
         width: 6,
         height: 4,
-        title: 'API requests',
+        title: 'Requests forwarded to ALB targets',
         metrics: [apiRequests],
       }),
       new cloudwatch.SingleValueWidget({
         width: 6,
         height: 4,
-        title: 'API error rate',
+        title: 'ALB target error rate',
         metrics: [apiErrorRate],
       }),
       new cloudwatch.SingleValueWidget({
@@ -162,7 +162,7 @@ export class RoomHopOperationsDashboard extends Construct {
   }
 
   private addApiSection(
-    httpApi: apigatewayv2.IHttpApi,
+    alb: elbv2.IApplicationLoadBalancer,
     requests: cloudwatch.IMetric,
     clientErrors: cloudwatch.IMetric,
     serverErrors: cloudwatch.IMetric,
@@ -170,14 +170,14 @@ export class RoomHopOperationsDashboard extends Construct {
   ): void {
     this.dashboard.addWidgets(new cloudwatch.TextWidget({
       width: 24,
-      height: 1,
-      markdown: '## API Gateway',
+      height: 3,
+      markdown: '## Private ALB\nMetrics aggregate Search, Reservation/Admin and Metabase. Target errors and ALB-generated errors are separate. Native ALB metrics do not identify individual URL routes. RequestCount excludes requests rejected before a target is selected.',
     }));
     this.dashboard.addWidgets(
       new cloudwatch.GraphWidget({
         width: 12,
         height: 6,
-        title: 'Requests and errors',
+        title: 'Forwarded requests and target errors',
         left: [requests, clientErrors, serverErrors],
         right: [errorRate],
         rightYAxis: { min: 0, max: 100, label: 'Percent' },
@@ -185,19 +185,27 @@ export class RoomHopOperationsDashboard extends Construct {
       new cloudwatch.GraphWidget({
         width: 12,
         height: 6,
-        title: 'Latency',
+        title: 'Target response time',
         left: [
-          httpApi.metricLatency({ period: PERIOD, statistic: 'p95', label: 'Latency p95' }),
-          httpApi.metricLatency({ period: PERIOD, statistic: 'p99', label: 'Latency p99' }),
-          httpApi.metricIntegrationLatency({
-            period: PERIOD,
-            statistic: 'p95',
-            label: 'Integration latency p95',
-          }),
+          alb.metrics.targetResponseTime({ period: PERIOD, statistic: 'p95', label: 'Target p95' }),
+          alb.metrics.targetResponseTime({ period: PERIOD, statistic: 'p99', label: 'Target p99' }),
         ],
-        leftYAxis: { min: 0, label: 'Milliseconds' },
+        leftYAxis: { min: 0, label: 'Seconds' },
       }),
     );
+    this.dashboard.addWidgets(new cloudwatch.GraphWidget({
+      width: 24,
+      height: 6,
+      title: 'ALB-generated errors (before target response)',
+      left: [
+        alb.metrics.httpCodeElb(elbv2.HttpCodeElb.ELB_4XX_COUNT, {
+          period: PERIOD, statistic: cloudwatch.Stats.SUM, label: 'ALB 4xx',
+        }),
+        alb.metrics.httpCodeElb(elbv2.HttpCodeElb.ELB_5XX_COUNT, {
+          period: PERIOD, statistic: cloudwatch.Stats.SUM, label: 'ALB 5xx',
+        }),
+      ],
+    }));
   }
 
   private addEcsSection(cluster: ecs.ICluster, services: NamedEcsService[]): void {

@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { runInNewContext } from 'node:vm';
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { NetworkStack } from '../lib/network-stack';
@@ -8,7 +9,9 @@ import { OpenSearchStack } from '../lib/opensearch-stack';
 import { AuthStack } from '../lib/auth-stack';
 import { EventsStack } from '../lib/events-stack';
 import { ComputeStack } from '../lib/compute-stack';
-import { ApiStack } from '../lib/api-stack';
+import { FrontendStack } from '../lib/frontend-stack';
+import { AnalyticsStack } from '../lib/analytics-stack';
+import { MetabaseStack } from '../lib/metabase-stack';
 import { DmsStack } from '../lib/dms-stack';
 import { ObservabilityStack } from '../lib/observability-stack';
 
@@ -38,14 +41,24 @@ function coreStacks() {
     userPool: auth.userPool,
     userPoolClient: auth.userPoolClient,
   });
-  const api = new ApiStack(app, 'TestApi', {
+  const frontend = new FrontendStack(app, 'TestFrontend', { env, alb: compute.alb });
+  frontend.addStackDependency(network);
+  frontend.addStackDependency(compute);
+  const analytics = new AnalyticsStack(app, 'TestAnalytics', { env, analyticsBucket: events.analyticsBucket });
+  const metabase = new MetabaseStack(app, 'TestMetabase', {
     env,
     vpc: network.vpc,
     securityGroups: network.securityGroups,
     alb: compute.alb,
     albListener: compute.albListener,
-    userPool: auth.userPool,
-    userPoolClient: auth.userPoolClient,
+    dbSecret: database.dbSecret,
+    dbEndpoint: database.dbEndpoint,
+    cluster: compute.cluster,
+    analyticsBucket: events.analyticsBucket,
+    athenaResultsBucket: analytics.athenaResultsBucket,
+    athenaWorkgroupName: analytics.athenaWorkgroup.name,
+    glueDatabaseName: analytics.glueDatabaseName,
+    cloudFrontUrl: frontend.cloudFrontUrl,
   });
   const dms = new DmsStack(app, 'TestDms', {
     env,
@@ -57,7 +70,7 @@ function coreStacks() {
   });
   const observability = new ObservabilityStack(app, 'TestObservability', {
     env,
-    httpApi: api.httpApi,
+    alb: compute.alb,
     cluster: compute.cluster,
     ecsServices: [
       { label: 'Search', service: compute.searchService },
@@ -82,10 +95,228 @@ function coreStacks() {
     replicationTask: dms.replicationTask,
     replicationInstance: dms.replicationInstance,
   });
-  return { network, database, search, events, compute, observability };
+  return { network, database, search, events, compute, observability, frontend, metabase, analytics, auth };
 }
 
 const stacks = coreStacks();
+
+test('crawler follows only the existing reservations table location and preserves its schema', () => {
+  const template = Template.fromStack(stacks.analytics);
+  template.resourceCountIs('AWS::Glue::Database', 1);
+  template.resourceCountIs('AWS::Glue::Table', 1);
+  template.resourceCountIs('AWS::Glue::Crawler', 1);
+  const [tableId, table] = Object.entries(template.findResources('AWS::Glue::Table'))[0];
+  const [dbId, database] = Object.entries(template.findResources('AWS::Glue::Database'))[0];
+  const crawler = Object.values(template.findResources('AWS::Glue::Crawler'))[0].Properties;
+  assert.equal(database.Properties.DatabaseInput.Name, 'roomhop_analytics');
+  assert.equal(table.Properties.TableInput.Name, 'reservations');
+  assert.deepEqual(crawler.Targets, { CatalogTargets: [{ DatabaseName: { Ref: dbId }, Tables: [{ Ref: tableId }] }] });
+  assert.deepEqual(crawler.DatabaseName, { Ref: dbId });
+  const schema = table.Properties.TableInput;
+  assert.deepEqual(schema.StorageDescriptor.Location,
+    stacks.analytics.resolve(`s3://${stacks.events.analyticsBucket.bucketName}/reservations/`));
+  assert.deepEqual(schema.PartitionKeys, ['year', 'month', 'day'].map(Name => ({ Name, Type: 'string' })));
+  assert.equal(schema.Parameters['projection.enabled'], 'false');
+  assert.equal(schema.Parameters.classification, 'json');
+  assert.equal(schema.StorageDescriptor.SerdeInfo.SerializationLibrary, 'org.openx.data.jsonserde.JsonSerDe');
+  assert.equal(schema.StorageDescriptor.Columns.length, 12);
+  assert.equal(schema.StorageDescriptor.Columns.find((column: any) => column.Name === 'totalAmount').Type, 'double');
+  assert.deepEqual(crawler.SchemaChangePolicy, { UpdateBehavior: 'LOG', DeleteBehavior: 'LOG' });
+  assert.deepEqual(JSON.parse(crawler.Configuration).CrawlerOutput.Partitions, { AddOrUpdateBehavior: 'InheritFromTable' });
+  assert.equal(crawler.Classifiers, undefined);
+  assert.equal(crawler.Schedule, undefined); // The single schedule lives in EventBridge Scheduler.
+});
+
+test('crawler role reads only reservation objects and cannot delete catalog metadata or write data', () => {
+  const template = Template.fromStack(stacks.analytics);
+  const [roleId, role] = Object.entries(template.findResources('AWS::IAM::Role'))
+    .find(([id]) => id.startsWith('ReservationCrawlerRole'))!;
+  assert.equal(role.Properties.AssumeRolePolicyDocument.Statement[0].Principal.Service, 'glue.amazonaws.com');
+  const policy = Object.values(template.findResources('AWS::IAM::Policy'))
+    .find(resource => resource.Properties.Roles.some((r: any) => r.Ref === roleId))!;
+  const statements = policy.Properties.PolicyDocument.Statement;
+  const actions = (statement: any): string[] => [statement.Action].flat();
+  for (const statement of statements) {
+    assert.ok(![statement.Resource].flat().includes('*'));
+    for (const action of actions(statement)) {
+      assert.ok(!action.includes('*'), `unexpected wildcard action ${action}`);
+      assert.ok(!/^glue:(?:Delete|BatchDelete|CreateTable|CreateDatabase)/.test(action));
+      if (action.startsWith('s3:')) {
+        assert.ok(['s3:GetBucketLocation', 's3:ListBucket', 's3:GetObject'].includes(action));
+      }
+    }
+  }
+  assert.deepEqual(statements.find((s: any) => actions(s).includes('s3:GetObject')).Resource,
+    stacks.analytics.resolve(stacks.events.analyticsBucket.arnForObjects('reservations/*')));
+  assert.deepEqual(statements.find((s: any) => actions(s).includes('s3:ListBucket')).Condition,
+    { StringLike: { 's3:prefix': ['reservations', 'reservations/*'] } });
+  const metadata = statements.find((s: any) => actions(s).includes('glue:BatchCreatePartition'));
+  assert.equal(metadata.Resource.length, 3); // catalog, database and this table only
+  assert.match(JSON.stringify(metadata.Resource), /ReservationsTable/);
+  const logs = statements.find((s: any) => actions(s).includes('logs:PutLogEvents'));
+  assert.match(JSON.stringify(logs.Resource), /\/aws-glue\/crawlers:log-stream:roomhop-reservation-crawler/);
+  const crawler = Object.values(template.findResources('AWS::Glue::Crawler'))[0];
+  assert.ok(crawler.DependsOn.includes(roleId));
+  assert.ok(crawler.DependsOn.some((id: string) => id.includes('DefaultPolicy')));
+});
+
+test('hourly scheduler can only start this crawler and bounds retries before the next hour', () => {
+  const template = Template.fromStack(stacks.analytics);
+  template.resourceCountIs('AWS::Scheduler::Schedule', 1);
+  const [crawlerId] = Object.keys(template.findResources('AWS::Glue::Crawler'));
+  const scheduleResource = Object.values(template.findResources('AWS::Scheduler::Schedule'))[0];
+  const schedule = scheduleResource.Properties;
+  assert.equal(schedule.ScheduleExpression, 'rate(1 hour)');
+  assert.deepEqual(schedule.FlexibleTimeWindow, { Mode: 'OFF' });
+  assert.match(JSON.stringify(schedule.Target.Arn), /aws-sdk:glue:startCrawler/);
+  assert.deepEqual(schedule.Target.Input, stacks.analytics.resolve(stacks.analytics.toJsonString({ Name: stacks.analytics.reservationCrawler.ref })));
+  assert.deepEqual(schedule.Target.RetryPolicy, { MaximumEventAgeInSeconds: 900, MaximumRetryAttempts: 1 });
+  const roleId = schedule.Target.RoleArn['Fn::GetAtt'][0];
+  assert.ok(scheduleResource.DependsOn.includes(roleId));
+  assert.ok(scheduleResource.DependsOn.some((id: string) => id.includes('DefaultPolicy')));
+  const role = template.findResources('AWS::IAM::Role')[roleId];
+  const trust = role.Properties.AssumeRolePolicyDocument.Statement[0];
+  assert.equal(trust.Principal.Service, 'scheduler.amazonaws.com');
+  assert.ok(trust.Condition.StringEquals['aws:SourceAccount']);
+  assert.match(JSON.stringify(trust.Condition.StringEquals['aws:SourceArn']), /schedule-group\/default/);
+  const policy = Object.values(template.findResources('AWS::IAM::Policy'))
+    .find(resource => resource.Properties.Roles.some((r: any) => r.Ref === roleId))!;
+  const statements = policy.Properties.PolicyDocument.Statement;
+  assert.equal(statements.length, 1);
+  assert.deepEqual([statements[0].Action].flat(), ['glue:StartCrawler']);
+  assert.deepEqual(statements[0].Resource, stacks.analytics.resolve(stacks.analytics.formatArn({
+    service: 'glue', resource: 'crawler', resourceName: stacks.analytics.reservationCrawler.ref,
+  })));
+  assert.match(JSON.stringify(statements[0].Resource), new RegExp(crawlerId));
+});
+
+test('crawler reuses private buckets and Athena configuration without adding networking', () => {
+  const template = Template.fromStack(stacks.analytics);
+  template.resourceCountIs('AWS::S3::Bucket', 1); // Existing Athena results bucket only.
+  template.resourceCountIs('AWS::Athena::WorkGroup', 1);
+  template.resourceCountIs('AWS::EC2::NatGateway', 0);
+  template.resourceCountIs('AWS::EC2::VPCEndpoint', 0);
+  const bucket = Object.values(template.findResources('AWS::S3::Bucket'))[0].Properties;
+  assert.equal(Object.values(bucket.PublicAccessBlockConfiguration).every(Boolean), true);
+  assert.ok(bucket.BucketEncryption);
+  assert.equal(bucket.WebsiteConfiguration, undefined);
+  const workgroup = Object.values(template.findResources('AWS::Athena::WorkGroup'))[0].Properties;
+  assert.equal(workgroup.Name, 'roomhop-analytics');
+  assert.equal(workgroup.WorkGroupConfiguration.EnforceWorkGroupConfiguration, true);
+  assert.deepEqual(workgroup.WorkGroupConfiguration.ResultConfiguration.OutputLocation,
+    stacks.analytics.resolve(`s3://${stacks.analytics.athenaResultsBucket.bucketName}/query-results/`));
+});
+
+test('Metabase can discover metadata and stream query results with scoped data access', () => {
+  const template = Template.fromStack(stacks.metabase);
+  const policy = Object.entries(template.findResources('AWS::IAM::Policy'))
+    .find(([id]) => id.startsWith('MetabaseTaskRoleDefaultPolicy'))![1];
+  const statements = policy.Properties.PolicyDocument.Statement;
+  const actions = (statement: any): string[] => [statement.Action].flat();
+  const query = statements.find((s: any) => actions(s).includes('athena:StartQueryExecution'));
+  assert.ok(actions(query).includes('athena:GetQueryResultsStream'));
+  assert.match(JSON.stringify(query.Resource), /workgroup\/roomhop-analytics/);
+  assert.match(JSON.stringify(statements.find((s: any) => actions(s).includes('athena:ListTableMetadata')).Resource), /datacatalog\/AwsDataCatalog/);
+  const metadata = statements.find((s: any) => actions(s).includes('glue:GetTables'));
+  assert.ok(actions(metadata).includes('glue:BatchGetPartition'));
+  assert.ok(actions(metadata).every(action => /^glue:(Get|BatchGet)/.test(action)));
+  assert.ok(!metadata.Resource.includes('*'));
+  assert.match(JSON.stringify(metadata.Resource), /reservations/);
+  const s3Statements = statements.filter((s: any) => actions(s).some(action => action.startsWith('s3:')));
+  assert.ok(s3Statements.every((s: any) => !actions(s).some(action => /Delete|\*/.test(action))));
+  const sourceRead = s3Statements.find((s: any) => actions(s).includes('s3:GetObject') && !actions(s).includes('s3:PutObject'));
+  assert.deepEqual(sourceRead.Resource, stacks.metabase.resolve(stacks.events.analyticsBucket.arnForObjects('reservations/*')));
+  const resultsWrite = s3Statements.find((s: any) => actions(s).includes('s3:PutObject'));
+  assert.deepEqual(resultsWrite.Resource, stacks.metabase.resolve(stacks.analytics.athenaResultsBucket.arnForObjects('query-results/*')));
+});
+
+test('uses one existing CloudFront distribution with OAC, WAF and a single private ALB origin', () => {
+  const template = Template.fromStack(stacks.frontend);
+  template.resourceCountIs('AWS::CloudFront::Distribution', 1);
+  template.resourceCountIs('AWS::CloudFront::VpcOrigin', 1);
+  template.resourceCountIs('AWS::CloudFront::OriginAccessControl', 2);
+  const config = Object.values(template.findResources('AWS::CloudFront::Distribution'))[0]
+    .Properties.DistributionConfig;
+  assert.ok(config.WebACLId);
+  assert.equal(config.Origins.length, 3);
+  const vpcOrigin = config.Origins.find((origin: any) => origin.VpcOriginConfig);
+  assert.ok(vpcOrigin);
+  const behaviors = config.CacheBehaviors.filter((behavior: any) =>
+    ['v1/*', 'analytics/*', 'analytics'].includes(behavior.PathPattern));
+  assert.equal(behaviors.length, 3);
+  for (const behavior of behaviors) {
+    assert.equal(behavior.TargetOriginId, vpcOrigin.Id);
+    assert.deepEqual([...behavior.AllowedMethods].sort(), ['DELETE', 'GET', 'HEAD', 'OPTIONS', 'PATCH', 'POST', 'PUT']);
+    // AWS-managed CachingDisabled and AllViewerExceptHostHeader. The latter
+    // forwards Authorization, every other viewer header, cookies and queries.
+    assert.equal(behavior.CachePolicyId, '4135ea2d-6df8-44a3-9df3-4b5a84be39ad');
+    assert.equal(behavior.OriginRequestPolicyId, 'b689b0a8-53d0-40ab-baf2-68738e2966ac');
+  }
+  assert.equal(behaviors.find((b: any) => b.PathPattern === 'v1/*').FunctionAssociations, undefined);
+  assert.equal(config.CustomErrorResponses, undefined);
+  for (const bucket of Object.values(template.findResources('AWS::S3::Bucket'))) {
+    assert.equal(bucket.Properties.WebsiteConfiguration, undefined);
+    assert.equal(Object.values(bucket.Properties.PublicAccessBlockConfiguration).every(Boolean), true);
+  }
+  const endpoint = Object.values(template.findResources('AWS::CloudFront::VpcOrigin'))[0]
+    .Properties.VpcOriginEndpointConfig;
+  assert.equal(endpoint.HTTPPort, 80);
+  assert.equal(endpoint.OriginProtocolPolicy, 'http-only');
+  assert.match(JSON.stringify(endpoint.Arn), /InternalAlb/);
+  const redirectCode = Object.entries(template.findResources('AWS::CloudFront::Function'))
+    .find(([id]) => id.startsWith('AnalyticsRedirectFunction'))![1].Properties.FunctionCode;
+  const redirect = runInNewContext(`${redirectCode}; handler(event)`, {
+    event: { request: { querystring: {
+      returnTo: { value: '%2Fdashboard%2F1' },
+      filter: { multiValue: [{ value: 'a' }, { value: 'b' }] },
+    } } },
+  });
+  assert.equal(redirect.statusCode, 308);
+  assert.equal(redirect.headers.location.value, '/analytics/?returnTo=%2Fdashboard%2F1&filter=a&filter=b');
+});
+
+test('removes every API Gateway and VPC Link, preserves private compute and reuses the ALB routes', () => {
+  for (const stack of Object.values(stacks)) {
+    const template = Template.fromStack(stack);
+    for (const resource of Object.values(template.toJSON().Resources) as any[]) {
+      assert.equal(resource.Type.startsWith('AWS::ApiGateway'), false);
+    }
+  }
+  const compute = Template.fromStack(stacks.compute);
+  compute.resourceCountIs('AWS::ElasticLoadBalancingV2::LoadBalancer', 1);
+  compute.hasResourceProperties('AWS::ElasticLoadBalancingV2::LoadBalancer', { Scheme: 'internal' });
+  const paths = Object.values(compute.findResources('AWS::ElasticLoadBalancingV2::ListenerRule'))
+    .flatMap((rule) => rule.Properties.Conditions.flatMap((condition: any) => condition.PathPatternConfig?.Values || []));
+  assert.deepEqual(paths.sort(), ['/v1/admin*', '/v1/reservations*', '/v1/search*']);
+  const metabase = Template.fromStack(stacks.metabase);
+  metabase.resourceCountIs('AWS::CloudFront::Distribution', 0);
+  metabase.resourceCountIs('AWS::ElasticLoadBalancingV2::Listener', 0);
+  metabase.hasResourceProperties('AWS::ElasticLoadBalancingV2::ListenerRule', {
+    Priority: 30,
+    Transforms: [{ Type: 'url-rewrite', UrlRewriteConfig: { Rewrites: [{ Regex: '^/analytics/(.*)$', Replace: '/$1' }] } }],
+  });
+  for (const template of [compute, metabase]) {
+    for (const service of Object.values(template.findResources('AWS::ECS::Service'))) {
+      assert.equal(service.Properties.NetworkConfiguration.AwsvpcConfiguration.AssignPublicIp, 'DISABLED');
+    }
+  }
+  const network = Template.fromStack(stacks.network);
+  network.resourceCountIs('AWS::EC2::InternetGateway', 1);
+  network.resourceCountIs('AWS::EC2::VPCGatewayAttachment', 1);
+  network.resourceCountIs('AWS::EC2::Route', 0);
+  for (const subnet of Object.values(network.findResources('AWS::EC2::Subnet'))) {
+    assert.equal(subnet.Properties.MapPublicIpOnLaunch, false);
+  }
+});
+
+test('retains the legacy VPC Link SG export only during the documented first deployment', () => {
+  const app = new cdk.App({ context: { retainLegacyIngress: 'true' } });
+  const network = new NetworkStack(app, 'MigrationNetwork', { env: { account: '111111111111', region: 'us-east-1' } });
+  const template = Template.fromStack(network).toJSON();
+  const oldGroup = Object.keys(template.Resources).find((id) => id.startsWith('VpcLinkSg'));
+  assert.ok(oldGroup);
+  assert.ok(Object.values(template.Outputs).some((output: any) => output.Export && JSON.stringify(output.Value).includes(oldGroup)));
+});
 
 test('keeps exactly two private AZ subnets and no NAT gateway', () => {
   const { network } = stacks;
@@ -129,28 +360,29 @@ test('notification and analytics Lambdas are not attached to isolated subnets', 
   }
 });
 
-test('allows ALB ingress only from the API Gateway VPC Link security group', () => {
+test('allows ALB ingress only from the supplied CloudFront managed prefix list on port 80', () => {
   const template = Template.fromStack(stacks.network);
   const groups = template.findResources('AWS::EC2::SecurityGroup');
   const albEntry = Object.entries(groups).find(([, group]) =>
     group.Properties.GroupDescription === 'Security group for internal ALB',
   );
-  const vpcLinkEntry = Object.entries(groups).find(([, group]) =>
-    group.Properties.GroupDescription === 'Security group used only by API Gateway VPC Link ENIs',
-  );
-  assert.ok(albEntry && vpcLinkEntry);
-  assert.equal(albEntry[1].Properties.SecurityGroupIngress, undefined);
-
-  const albIngress = Object.values(template.findResources('AWS::EC2::SecurityGroupIngress'))
-    .filter((rule) => JSON.stringify(rule.Properties.GroupId).includes(albEntry[0]));
-  assert.deepEqual(albIngress.map((rule) => rule.Properties.FromPort).sort(), [80, 8080]);
+  assert.ok(albEntry);
+  assert.equal(Object.keys(groups).some((id) => id.startsWith('VpcLinkSg')), false);
+  const albIngress = [
+    ...(albEntry[1].Properties.SecurityGroupIngress || []),
+    ...Object.values(template.findResources('AWS::EC2::SecurityGroupIngress'))
+      .filter((rule) => JSON.stringify(rule.Properties.GroupId).includes(albEntry[0]))
+      .map((rule) => rule.Properties),
+  ];
+  assert.deepEqual(albIngress.map((rule) => rule.FromPort), [80]);
   for (const rule of albIngress) {
     assert.deepEqual(
-      rule.Properties.SourceSecurityGroupId,
-      { 'Fn::GetAtt': [vpcLinkEntry[0], 'GroupId'] },
+      rule.SourcePrefixListId,
+      { Ref: 'CloudFrontOriginFacingPrefixListId' },
     );
-    assert.equal(rule.Properties.CidrIp, undefined);
-    assert.equal(rule.Properties.CidrIpv6, undefined);
+    assert.equal(rule.CidrIp, undefined);
+    assert.equal(rule.CidrIpv6, undefined);
+    assert.equal(rule.SourceSecurityGroupId, undefined);
   }
 });
 
@@ -186,7 +418,7 @@ test('creates one cross-service operations dashboard without duplicating applica
   const dashboards = Object.values(template.findResources('AWS::CloudWatch::Dashboard'));
   const body = JSON.stringify(dashboards[0].Properties.DashboardBody);
   for (const expected of [
-    'AWS/ApiGateway',
+    'AWS/ApplicationELB',
     'AWS/ECS',
     'ECS/ContainerInsights',
     'AWS/RDS',
@@ -194,7 +426,7 @@ test('creates one cross-service operations dashboard without duplicating applica
     'AWS/SQS',
     'AWS/Lambda',
     'AWS/DMS',
-    'API error rate (%)',
+    'Target error rate (%)',
     'Total visible DLQ messages',
     'singleValue',
     'RoomHop Operations',

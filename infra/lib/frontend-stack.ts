@@ -4,12 +4,13 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import { Construct } from 'constructs';
 import * as path from 'path';
 import { CONFIG } from './config';
 
 export interface FrontendStackProps extends cdk.StackProps {
-  apiEndpoint: string;
+  alb: elbv2.ApplicationLoadBalancer;
 }
 
 export class FrontendStack extends cdk.Stack {
@@ -111,6 +112,9 @@ export class FrontendStack extends cdk.Stack {
       ],
     });
     this.wafAclArn = webAcl.attrArn;
+    if (this.node.tryGetContext('retainLegacyIngress') === 'true') {
+      this.exportValue(webAcl.attrArn);
+    }
 
     const spaRewrite = new cloudfront.Function(this, 'SpaRewriteFunction', {
       functionName: `${CONFIG.projectName}-spa-rewrite`,
@@ -126,7 +130,34 @@ export class FrontendStack extends cdk.Stack {
 }`),
     });
 
-    const apiDomain = cdk.Fn.select(2, cdk.Fn.split('/', props.apiEndpoint));
+    const applicationOrigin = origins.VpcOrigin.withApplicationLoadBalancer(props.alb, {
+      httpPort: 80,
+      httpsPort: 443,
+      protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+      readTimeout: cdk.Duration.seconds(60),
+    });
+    const apiBehavior: cloudfront.BehaviorOptions = {
+      origin: applicationOrigin,
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+      cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+      // All viewer headers except Host, including Authorization, Content-Type,
+      // CORS and idempotency headers, plus all query strings and cookies.
+      originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+    };
+    const analyticsRedirect = new cloudfront.Function(this, 'AnalyticsRedirectFunction', {
+      code: cloudfront.FunctionCode.fromInline(`function handler(event) {
+  var query = event.request.querystring || {};
+  var parts = [];
+  Object.keys(query).forEach(function (name) {
+    (query[name].multiValue || [query[name]]).forEach(function (item) {
+      parts.push(name + '=' + item.value);
+    });
+  });
+  return { statusCode: 308, statusDescription: 'Permanent Redirect',
+    headers: { location: { value: '/analytics/' + (parts.length ? '?' + parts.join('&') : '') } } };
+}`),
+    });
     this.distribution = new cloudfront.Distribution(this, 'RoomHopDistribution', {
       comment: 'RoomHop web application, API and hotel-image CDN',
       defaultRootObject: 'index.html',
@@ -142,15 +173,14 @@ export class FrontendStack extends cdk.Stack {
         }],
       },
       additionalBehaviors: {
-        'v1/*': {
-          origin: new origins.HttpOrigin(apiDomain, {
-            protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
-            originSslProtocols: [cloudfront.OriginSslPolicy.TLS_V1_2],
-          }),
-          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        'v1/*': apiBehavior,
+        'analytics/*': apiBehavior,
+        'analytics': {
+          ...apiBehavior,
+          functionAssociations: [{
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: analyticsRedirect,
+          }],
         },
         'images/*': {
           origin: origins.S3BucketOrigin.withOriginAccessControl(this.imagesBucket),

@@ -2,7 +2,7 @@
 
 RoomHop est une plateforme de recherche, réservation et gestion hôtelière. Le dépôt conserve un environnement local Docker et une architecture AWS complète décrite en CDK TypeScript.
 
-Le code AWS est actuellement **défini et validé localement, mais non déployé**.
+L'application AWS est déjà déployée. La migration VPC Origin est préparée localement, sans déploiement; suivre le [guide de migration](docs/cloudfront-vpc-origin-migration.md) après revue.
 
 ## Fonctionnalités
 
@@ -21,6 +21,20 @@ Le code AWS est actuellement **défini et validé localement, mais non déployé
 
 <img width="2330" height="1881" alt="RoomHop_AWS architecture diagram drawio" src="https://github.com/user-attachments/assets/2a3ffef9-910b-460b-b577-942529e51816" />
 
+```text
+Browser --> CloudFront + WAF --> OAC --> private S3 SPA / images
+                   |
+                   +--> VPC Origin --> internal ALB :80
+                                        |-- /v1/search* --> Search ECS
+                                        |-- /v1/reservations*, /v1/admin* --> Reservation ECS (Cognito JWT)
+                                        +-- /analytics/* --> Metabase ECS (session login)
+
+RDS Single-AZ ── DMS full-load + CDC ──> OpenSearch
+Reservation ── EventBridge ──> SQS ──> Lambda ──> SES / S3
+S3 analytics ──actual data──> Athena ──> Metabase ECS
+      └─> Glue Crawler (hourly) ──> Glue Catalog ──schema/partitions──> Athena
+GitHub ──> CodeConnections + CodePipeline + CodeBuild
+```
 
 Contraintes intentionnelles:
 
@@ -98,3 +112,5 @@ npm run synth
 ```
 
 Les services AWS et Lambdas possèdent aussi leurs propres suites `npm test`. Voir [infra/README.md](infra/README.md) pour le détail, les paramètres de déploiement éventuel et les prérequis SES/GitHub/Metabase.
+
+Le [guide du crawler analytics](docs/analytics-crawler.md) décrit le catalogue existant, le crawl horaire, les permissions Metabase, les requêtes de validation et le premier crawl nécessaire après un éventuel déploiement.

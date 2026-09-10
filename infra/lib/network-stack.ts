@@ -9,7 +9,6 @@ import { CONFIG } from './config';
  * Strict least-privilege: each layer only accepts traffic from the layer above.
  */
 export interface SecurityGroups {
-  vpcLinkSg: ec2.SecurityGroup;
   albSg: ec2.SecurityGroup;
   ecsSg: ec2.SecurityGroup;
   rdsSg: ec2.SecurityGroup;
@@ -55,29 +54,41 @@ export class NetworkStack extends cdk.Stack {
       'Allow HTTPS from VPC for endpoint access'
     );
 
-    // ALB SG — accepts traffic from VPC Link (API Gateway sends traffic from within VPC)
-    const vpcLinkSg = new ec2.SecurityGroup(this, 'VpcLinkSg', {
-      vpc: this.vpc,
-      description: 'Security group used only by API Gateway VPC Link ENIs',
-      allowAllOutbound: true,
-    });
-
+    // The internal ALB accepts CloudFront origin traffic on HTTP only.
     const albSg = new ec2.SecurityGroup(this, 'AlbSg', {
       vpc: this.vpc,
       description: 'Security group for internal ALB',
       allowAllOutbound: true,
     });
-    // API Gateway VPC Link sends traffic from within the VPC subnets
-    albSg.addIngressRule(
-      vpcLinkSg,
-      ec2.Port.tcp(80),
-      'Allow HTTP from API Gateway VPC Link only'
-    );
-    albSg.addIngressRule(
-      vpcLinkSg,
-      ec2.Port.tcp(8080),
-      'Allow Metabase HTTP API VPC Link only'
-    );
+    // VPC Origins need an attached IGW, but no subnet routes to it or NAT.
+    const internetGateway = new ec2.CfnInternetGateway(this, 'VpcOriginInternetGateway');
+    new ec2.CfnVPCGatewayAttachment(this, 'VpcOriginGatewayAttachment', {
+      vpcId: this.vpc.vpcId,
+      internetGatewayId: internetGateway.ref,
+    });
+
+    // The VPC Origin L2 does not expose the service-managed SG ID. Use the
+    // supported origin-facing prefix list without a custom lookup Lambda.
+    const originPrefixList = new cdk.CfnParameter(this, 'CloudFrontOriginFacingPrefixListId', {
+      type: 'String',
+      allowedPattern: '^pl-[0-9a-f]+$',
+      description: 'Regional AWS-managed com.amazonaws.global.cloudfront.origin-facing prefix list ID',
+    });
+    albSg.addIngressRule(ec2.Peer.prefixList(originPrefixList.valueAsString), ec2.Port.tcp(80),
+      'Allow HTTP from CloudFront origin-facing prefix list');
+
+    // First deployment only: preserve the old IDs and export while deployed
+    // API stacks still use the VPC Link ENIs. See the migration runbook.
+    if (this.node.tryGetContext('retainLegacyIngress') === 'true') {
+      const vpcLinkSg = new ec2.SecurityGroup(this, 'VpcLinkSg', {
+        vpc: this.vpc,
+        description: 'Security group used only by API Gateway VPC Link ENIs',
+        allowAllOutbound: true,
+      });
+      albSg.addIngressRule(vpcLinkSg, ec2.Port.tcp(80), 'Allow HTTP from API Gateway VPC Link only');
+      albSg.addIngressRule(vpcLinkSg, ec2.Port.tcp(8080), 'Allow Metabase HTTP API VPC Link only');
+      this.exportValue(vpcLinkSg.securityGroupId);
+    }
 
     // ECS SG — accepts traffic only from the ALB
     const ecsSg = new ec2.SecurityGroup(this, 'EcsSg', {
@@ -134,7 +145,6 @@ export class NetworkStack extends cdk.Stack {
     });
 
     this.securityGroups = {
-      vpcLinkSg,
       albSg,
       ecsSg,
       rdsSg,

@@ -8,7 +8,6 @@ import { OpenSearchStack } from '../lib/opensearch-stack';
 import { AuthStack } from '../lib/auth-stack';
 import { EventsStack } from '../lib/events-stack';
 import { ComputeStack } from '../lib/compute-stack';
-import { ApiStack } from '../lib/api-stack';
 import { FrontendStack } from '../lib/frontend-stack';
 import { AnalyticsStack } from '../lib/analytics-stack';
 import { MetabaseStack } from '../lib/metabase-stack';
@@ -47,20 +46,13 @@ const compute = new ComputeStack(app, 'RoomHop-Compute', {
   userPoolClient: auth.userPoolClient,
 });
 
-const api = new ApiStack(app, 'RoomHop-Api', {
-  env,
-  vpc: network.vpc,
-  securityGroups: network.securityGroups,
-  alb: compute.alb,
-  albListener: compute.albListener,
-  userPool: auth.userPool,
-  userPoolClient: auth.userPoolClient,
-});
-
 const frontend = new FrontendStack(app, 'RoomHop-Frontend', {
   env,
-  apiEndpoint: api.apiEndpoint,
+  alb: compute.alb,
 });
+// Creation requires an active ALB and the VPC's IGW attachment.
+frontend.addStackDependency(network);
+frontend.addStackDependency(compute);
 
 const analytics = new AnalyticsStack(app, 'RoomHop-Analytics', {
   env,
@@ -76,9 +68,11 @@ const metabase = new MetabaseStack(app, 'RoomHop-Metabase', {
   cluster: compute.cluster,
   alb: compute.alb,
   analyticsBucket: events.analyticsBucket,
+  albListener: compute.albListener,
   athenaResultsBucket: analytics.athenaResultsBucket,
+  athenaWorkgroupName: analytics.athenaWorkgroup.name,
   glueDatabaseName: analytics.glueDatabaseName,
-  wafAclArn: frontend.wafAclArn,
+  cloudFrontUrl: frontend.cloudFrontUrl,
 });
 
 const dms = new DmsStack(app, 'RoomHop-DMS', {
@@ -92,7 +86,7 @@ const dms = new DmsStack(app, 'RoomHop-DMS', {
 
 new ObservabilityStack(app, 'RoomHop-Observability', {
   env,
-  httpApi: api.httpApi,
+  alb: compute.alb,
   cluster: compute.cluster,
   ecsServices: [
     { label: 'Search', service: compute.searchService },

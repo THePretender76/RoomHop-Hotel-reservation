@@ -15,7 +15,8 @@ const PORT = process.env.PORT || 3000;
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['*'],
+    : '*',
+  maxAge: 3600,
 }));
 
 // JSON body parsing

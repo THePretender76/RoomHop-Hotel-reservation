@@ -1,6 +1,7 @@
-// Base URL — API Gateway in production, localhost for local dev
-const BASE_URL = import.meta.env.VITE_API_URL
-  || (import.meta.env.PROD ? globalThis.location.origin : 'http://localhost:3000');
+// Production requests use the RoomHop origin; local development can override it.
+const BASE_URL = import.meta.env.PROD
+  ? globalThis.location.origin
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
 
 // Auth token getter — set by App.jsx to provide JWT from Cognito
 let tokenGetter = null;
@@ -33,7 +34,7 @@ async function errorFrom(response) {
 }
 
 /**
- * Make a GET request to the API gateway.
+ * Make a GET request to the RoomHop API.
  * @param {string} path - API path, e.g. '/v1/search'
  * @param {Object} params - Query parameters as key/value pairs
  * @returns {Promise<any>} Parsed JSON response body
@@ -63,7 +64,7 @@ export async function apiGet(path, params = {}) {
 }
 
 /**
- * Make a POST request to the API gateway.
+ * Make a POST request to the RoomHop API.
  * @param {string} path - API path, e.g. '/v1/reservations'
  * @param {Object} body - Request body (will be JSON-serialised)
  * @param {Object} headers - Additional headers (e.g. Idempotency-Key)
@@ -92,7 +93,7 @@ export async function apiPost(path, body = {}, headers = {}) {
 }
 
 /**
- * Make a DELETE request to the API gateway.
+ * Make a DELETE request to the RoomHop API.
  * @param {string} path - API path, e.g. '/v1/reservations/1'
  * @returns {Promise<any>} Parsed JSON response body
  * @throws {{ status: number, message: string, data: any }} On non-2xx response
