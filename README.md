@@ -19,18 +19,8 @@ Le code AWS est actuellement **défini et validé localement, mais non déployé
 
 ## Architecture AWS
 
-```text
-Browser ──> CloudFront + WAF ──> S3 React SPA / S3 images
-                  └────────────> API Gateway + Cognito JWT
-                                      └─ VPC Link ─> internal ALB
-                                           ├─ Search ECS ─> OpenSearch
-                                           └─ Reservation ECS ─> RDS MySQL
+<img width="2330" height="1881" alt="RoomHop_AWS architecture diagram drawio" src="https://github.com/user-attachments/assets/2a3ffef9-910b-460b-b577-942529e51816" />
 
-RDS Single-AZ ── DMS full-load + CDC ──> OpenSearch
-Reservation ── EventBridge ──> SQS ──> Lambda ──> SES / S3
-S3 analytics ──> Glue + Athena ──> Metabase ECS
-GitHub ──> CodeConnections + CodePipeline + CodeBuild
-```
 
 Contraintes intentionnelles:
 
