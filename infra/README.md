@@ -13,26 +13,8 @@ Ces invariants sont protégés par les tests de `infra/test/architecture.test.ts
 
 ## Architecture définie
 
-```text
-CloudFront + WAF
-  ├─ S3 React SPA
-  ├─ S3 hotel images (/images/*)
-  └─ API Gateway HTTP API (/v1/*)
-       └─ VPC Link ──> internal ALB
-            ├─ Search ECS/Fargate ──> OpenSearch
-            │    ├─ fallback RDS MySQL
-            │    └─ ADOT ──> X-Ray VPC endpoint
-            └─ Reservation ECS/Fargate ──> RDS MySQL
-                         ├─ ADOT ──> X-Ray VPC endpoint
-                         ├─ Cognito partner groups/status
-                         └─ EventBridge
-                              ├─ SQS notifications ──> Lambda ──> SES
-                              └─ SQS analytics ──> Lambda ──> S3
+<img width="2330" height="1881" alt="RoomHop_AWS architecture diagram drawio" src="https://github.com/user-attachments/assets/41378aa2-cd53-4283-ad74-1757a373e14e" />
 
-RDS MySQL ── DMS full-load + CDC ──> OpenSearch
-S3 analytics ──> Glue + Athena ──> Metabase ECS/Fargate
-GitHub ──> CodeConnections + CodePipeline + CodeBuild
-```
 
 ## Stacks
 
